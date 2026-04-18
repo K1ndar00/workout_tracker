@@ -58,7 +58,7 @@ export default function WorkoutDetail({ workout, onChange }: WorkoutDetailProps)
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-12 py-14">
+    <div className="max-w-3xl mx-auto px-4 py-6 md:px-12 md:py-14">
       {/* Emoji picker */}
       <div className="relative mb-3" ref={pickerRef}>
         <button
@@ -91,11 +91,11 @@ export default function WorkoutDetail({ workout, onChange }: WorkoutDetailProps)
         value={workout.title}
         onChange={(e) => update({ title: e.target.value })}
         placeholder="ワークアウト名"
-        className="w-full text-4xl font-bold text-gray-900 placeholder-gray-200 border-none outline-none bg-transparent mb-4 leading-tight"
+        className="w-full text-3xl md:text-4xl font-bold text-gray-900 placeholder-gray-200 border-none outline-none bg-transparent mb-4 leading-tight"
       />
 
       {/* Metadata bar */}
-      <div className="flex items-center gap-4 mb-10 pb-8 border-b border-gray-100">
+      <div className="flex flex-wrap items-center gap-3 mb-8 pb-6 border-b border-gray-100">
         <div className="flex items-center gap-1.5 text-sm text-gray-500">
           <Calendar className="w-4 h-4 text-gray-400" />
           <input

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Workout } from '@/lib/types';
 import { formatDate, formatMonthKey } from '@/lib/utils';
-import { Dumbbell, Plus, Trash2 } from 'lucide-react';
+import { Dumbbell, Plus, Trash2, X } from 'lucide-react';
 
 interface SidebarProps {
   workouts: Workout[];
@@ -11,6 +11,8 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
@@ -27,18 +29,43 @@ function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
   return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
 }
 
-export default function Sidebar({ workouts, selectedId, onSelect, onNew, onDelete }: SidebarProps) {
+export default function Sidebar({
+  workouts,
+  selectedId,
+  onSelect,
+  onNew,
+  onDelete,
+  isOpen,
+  onClose,
+}: SidebarProps) {
   const grouped = useMemo(() => groupByMonth(workouts), [workouts]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <aside className="w-60 h-full flex flex-col bg-[#f7f6f3] border-r border-gray-200 shrink-0 select-none">
+    <aside
+      className={`
+        fixed inset-y-0 left-0 z-50 w-64
+        transform transition-transform duration-250 ease-in-out
+        md:relative md:translate-x-0 md:z-auto md:w-60
+        flex flex-col bg-[#f7f6f3] border-r border-gray-200 shrink-0 select-none
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}
+    >
       {/* Header */}
       <div className="px-3 py-3.5 flex items-center gap-2.5 border-b border-gray-200/60">
         <div className="w-6 h-6 bg-gray-900 rounded-md flex items-center justify-center shrink-0">
           <Dumbbell className="w-3.5 h-3.5 text-white" />
         </div>
-        <span className="text-sm font-semibold text-gray-800 truncate">Workout Tracker</span>
+        <span className="text-sm font-semibold text-gray-800 truncate flex-1">
+          Workout Tracker
+        </span>
+        {/* Mobile close button */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Workout list */}
@@ -60,10 +87,11 @@ export default function Sidebar({ workouts, selectedId, onSelect, onNew, onDelet
                 onMouseEnter={() => setHoveredId(w.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 className={`
-                  flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-sm mb-0.5
-                  ${selectedId === w.id
-                    ? 'bg-gray-200/80 text-gray-900'
-                    : 'text-gray-700 hover:bg-gray-200/50'
+                  flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer text-sm mb-0.5
+                  ${
+                    selectedId === w.id
+                      ? 'bg-gray-200/80 text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-200/50 active:bg-gray-200'
                   }
                 `}
               >
@@ -77,7 +105,7 @@ export default function Sidebar({ workouts, selectedId, onSelect, onNew, onDelet
                     e.stopPropagation();
                     onDelete(w.id);
                   }}
-                  className={`shrink-0 p-0.5 rounded hover:bg-red-100 hover:text-red-500 text-gray-300 transition-all ${
+                  className={`shrink-0 p-1 rounded hover:bg-red-100 hover:text-red-500 text-gray-300 transition-all ${
                     hoveredId === w.id ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
@@ -93,7 +121,7 @@ export default function Sidebar({ workouts, selectedId, onSelect, onNew, onDelet
       <div className="p-2 border-t border-gray-200">
         <button
           onClick={onNew}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700 active:bg-gray-300 transition-colors"
         >
           <Plus className="w-4 h-4" />
           新しいワークアウト

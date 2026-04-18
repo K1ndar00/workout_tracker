@@ -88,8 +88,8 @@ export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus 
       </div>
 
       {/* Sets table */}
-      <div className="ml-5 rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="ml-0 md:ml-5 rounded-xl border border-gray-200 overflow-x-auto">
+        <table className="w-full text-sm min-w-[280px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="py-2 px-3 text-[11px] font-semibold text-gray-400 text-center w-10">
