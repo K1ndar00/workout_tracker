@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { DailyNutrition, FoodItem, NutritionMeal, NutritionSettings } from '@/lib/types';
-import { createFoodItem, createMeal, formatDayLabel } from '@/lib/utils';
+import { DailyNutrition, FoodItem, NutritionMeal, NutritionSettings } from '@/shared/types';
+import { createFoodItem, createMeal, formatDayLabel } from '@/shared/utils';
 import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, X } from 'lucide-react';
 
 interface Props {

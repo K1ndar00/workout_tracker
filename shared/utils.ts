@@ -10,18 +10,28 @@ import {
   WorkoutSet,
 } from './types';
 
+/** crypto.randomUUID is missing in some React Native runtimes, so fall back to a v4-shaped id. */
+export function uid(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export function createSet(template?: Partial<WorkoutSet>): WorkoutSet {
-  return { id: crypto.randomUUID(), reps: 0, weight: 0, unit: 'kg', completed: false, ...template };
+  return { id: uid(), reps: 0, weight: 0, unit: 'kg', completed: false, ...template };
 }
 
 export function createExercise(): Exercise {
-  return { id: crypto.randomUUID(), name: '', sets: [createSet()] };
+  return { id: uid(), name: '', sets: [createSet()] };
 }
 
 export function createWorkout(): Workout {
   const today = new Date().toISOString().slice(0, 10);
   return {
-    id: crypto.randomUUID(),
+    id: uid(),
     title: '新しいワークアウト',
     date: today,
     emoji: '🏋️',
@@ -32,16 +42,16 @@ export function createWorkout(): Workout {
 }
 
 export function createPlanExercise(): PlanExercise {
-  return { id: crypto.randomUUID(), name: '', sets: 3, reps: '10' };
+  return { id: uid(), name: '', sets: 3, reps: '10' };
 }
 
 export function createPlanDay(index: number): PlanDay {
-  return { id: crypto.randomUUID(), label: `Day ${index}`, exercises: [] };
+  return { id: uid(), label: `Day ${index}`, exercises: [] };
 }
 
 export function createPlan(): TrainingPlan {
   return {
-    id: crypto.randomUUID(),
+    id: uid(),
     name: '新しいプラン',
     emoji: '🗓️',
     description: '',
@@ -53,16 +63,16 @@ export function createPlan(): TrainingPlan {
 }
 
 export function createFoodItem(): FoodItem {
-  return { id: crypto.randomUUID(), name: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0 };
+  return { id: uid(), name: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0 };
 }
 
 export function createMeal(name: string): NutritionMeal {
-  return { id: crypto.randomUUID(), name, foods: [] };
+  return { id: uid(), name, foods: [] };
 }
 
 export function createNutritionDay(date: string): DailyNutrition {
   return {
-    id: crypto.randomUUID(),
+    id: uid(),
     date,
     meals: [createMeal('朝食'), createMeal('昼食'), createMeal('夕食')],
   };

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, WorkoutSet } from '@/lib/types';
-import { createSet } from '@/lib/utils';
+import { Exercise, WorkoutSet } from '@/shared/types';
+import { createSet } from '@/shared/utils';
 import { Check, GripVertical, Plus, Trash2 } from 'lucide-react';
 
 interface ExerciseBlockProps {
