@@ -1,19 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AppView, DailyNutrition, NutritionSettings, TrainingPlan, Workout } from '@/lib/types';
-import {
-  DEFAULT_SETTINGS,
-  loadNutrition,
-  loadPlans,
-  loadSettings,
-  loadWorkouts,
-  persistNutrition,
-  persistPlans,
-  persistSettings,
-  persistWorkouts,
-} from '@/lib/storage';
-import { createNutritionDay, createPlan, createWorkout, today } from '@/lib/utils';
+import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
+import { useAppData } from '@/shared/useAppData';
+import { createNutritionDay, createPlan, createWorkout, today } from '@/shared/utils';
+import { supabase } from '@/lib/supabase';
+import { webStorage } from '@/lib/storage';
+import AuthGate from '@/components/AuthGate';
 import Sidebar from '@/components/Sidebar';
 import WorkoutDetail from '@/components/WorkoutDetail';
 import EmptyState from '@/components/EmptyState';
@@ -23,40 +16,50 @@ import ProgressView from '@/components/ProgressView';
 import { Menu, Plus } from 'lucide-react';
 
 export default function Home() {
-  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <AuthGate>
+      {(userId, signOut) => <WorkoutApp key={userId ?? 'local'} userId={userId} onSignOut={signOut} />}
+    </AuthGate>
+  );
+}
+
+function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: () => void }) {
+  const {
+    ready: isLoaded,
+    status: syncStatus,
+    lastError: syncError,
+    sync,
+    workouts,
+    setWorkouts,
+    plans,
+    setPlans,
+    nutrition: nutritionLogs,
+    setNutrition: setNutritionLogs,
+    settings: nutritionSettings,
+    setSettings: setNutritionSettings,
+  } = useAppData({ client: supabase, userId, storage: webStorage });
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<AppView>('workouts');
-
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
-
-  const [plans, setPlans] = useState<TrainingPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-
-  const [nutritionLogs, setNutritionLogs] = useState<DailyNutrition[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(today());
-  const [nutritionSettings, setNutritionSettings] = useState<NutritionSettings>(DEFAULT_SETTINGS);
 
-  // Load everything once
+  // Pick the first item once the data has loaded, and again if the selection disappears
+  // (e.g. it was deleted on another device).
   useEffect(() => {
-    const ws = loadWorkouts();
-    const ps = loadPlans();
-    const ns = loadNutrition();
-    const st = loadSettings();
-    setWorkouts(ws);
-    setSelectedWorkoutId(ws[0]?.id ?? null);
-    setPlans(ps);
-    setSelectedPlanId(ps[0]?.id ?? null);
-    setNutritionLogs(ns);
-    setNutritionSettings(st);
-    setIsLoaded(true);
-  }, []);
+    if (!isLoaded) return;
+    if (!workouts.some((w) => w.id === selectedWorkoutId)) setSelectedWorkoutId(workouts[0]?.id ?? null);
+    if (!plans.some((p) => p.id === selectedPlanId)) setSelectedPlanId(plans[0]?.id ?? null);
+  }, [isLoaded, workouts, plans, selectedWorkoutId, selectedPlanId]);
 
-  // Persist on change
-  useEffect(() => { if (isLoaded) persistWorkouts(workouts); }, [workouts, isLoaded]);
-  useEffect(() => { if (isLoaded) persistPlans(plans); }, [plans, isLoaded]);
-  useEffect(() => { if (isLoaded) persistNutrition(nutritionLogs); }, [nutritionLogs, isLoaded]);
-  useEffect(() => { if (isLoaded) persistSettings(nutritionSettings); }, [nutritionSettings, isLoaded]);
+  // Refresh when the tab becomes visible again.
+  useEffect(() => {
+    if (!supabase) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') void sync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [sync]);
 
   // Workout handlers
   const handleNewWorkout = useCallback(() => {
@@ -114,8 +117,9 @@ export default function Home() {
 
   const handleNutritionChange = useCallback((log: DailyNutrition) => {
     setNutritionLogs((prev) => {
-      const exists = prev.some((n) => n.id === log.id);
-      return exists ? prev.map((n) => (n.id === log.id ? log : n)) : [log, ...prev];
+      // One log per date: that date is also the key it syncs under.
+      const exists = prev.some((n) => n.date === log.date);
+      return exists ? prev.map((n) => (n.date === log.date ? log : n)) : [log, ...prev];
     });
   }, []);
 
@@ -164,6 +168,10 @@ export default function Home() {
         nutritionLogs={nutritionLogs}
         selectedDate={selectedDate}
         onSelectDate={(date) => { setSelectedDate(date); setSidebarOpen(false); }}
+        syncStatus={syncStatus}
+        syncError={syncError}
+        signedIn={userId !== null}
+        onSignOut={onSignOut}
       />
 
       <main className="flex-1 overflow-y-auto flex flex-col min-w-0">

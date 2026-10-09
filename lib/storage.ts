@@ -1,17 +1,17 @@
-import { DailyNutrition, NutritionSettings, TrainingPlan, Workout } from './types';
+import type { AppData, KeyValueStorage } from '@/shared/sync';
+import { DEFAULT_SETTINGS } from '@/shared/sync';
 
-function loadArr<T>(key: string): T[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T[]) : [];
-  } catch {
-    return [];
-  }
-}
+// Keys used before accounts/sync existed.
+const LEGACY = {
+  workouts: 'workout-tracker-v1',
+  plans: 'workout-tracker-plans-v1',
+  nutrition: 'workout-tracker-nutrition-v1',
+  settings: 'workout-tracker-settings-v1',
+};
+const LEGACY_CLAIMED = 'workout-tracker-legacy-claimed';
+const DATA_KEY = /^wt:[^:]+:data$/;
 
-function loadObj<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
+function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -20,34 +20,39 @@ function loadObj<T>(key: string, fallback: T): T {
   }
 }
 
-function persist(key: string, data: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch {}
+/** Data saved by the pre-sync version, claimed once by whichever account opens the app first. */
+function claimLegacyData(): string | null {
+  if (localStorage.getItem(LEGACY_CLAIMED)) return null;
+  const data: AppData = {
+    workouts: readJson(LEGACY.workouts, []),
+    plans: readJson(LEGACY.plans, []),
+    nutrition: readJson(LEGACY.nutrition, []),
+    settings: { ...DEFAULT_SETTINGS, ...readJson(LEGACY.settings, {}) },
+  };
+  const empty = !data.workouts.length && !data.plans.length && !data.nutrition.length;
+  if (empty) return null;
+  localStorage.setItem(LEGACY_CLAIMED, '1');
+  return JSON.stringify(data);
 }
 
-const K = {
-  workouts: 'workout-tracker-v1',
-  plans: 'workout-tracker-plans-v1',
-  nutrition: 'workout-tracker-nutrition-v1',
-  settings: 'workout-tracker-settings-v1',
+export const webStorage: KeyValueStorage = {
+  async getItem(key) {
+    try {
+      const value = localStorage.getItem(key);
+      if (value === null && DATA_KEY.test(key)) return claimLegacyData();
+      return value;
+    } catch {
+      return null;
+    }
+  },
+  async setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  },
+  async removeItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  },
 };
-
-export const loadWorkouts = (): Workout[] => loadArr<Workout>(K.workouts);
-export const persistWorkouts = (d: Workout[]) => persist(K.workouts, d);
-
-export const loadPlans = (): TrainingPlan[] => loadArr<TrainingPlan>(K.plans);
-export const persistPlans = (d: TrainingPlan[]) => persist(K.plans, d);
-
-export const loadNutrition = (): DailyNutrition[] => loadArr<DailyNutrition>(K.nutrition);
-export const persistNutrition = (d: DailyNutrition[]) => persist(K.nutrition, d);
-
-export const DEFAULT_SETTINGS: NutritionSettings = {
-  targetCalories: 2000,
-  targetProtein: 150,
-  targetCarbs: 250,
-  targetFat: 65,
-};
-export const loadSettings = (): NutritionSettings =>
-  loadObj<NutritionSettings>(K.settings, DEFAULT_SETTINGS);
-export const persistSettings = (d: NutritionSettings) => persist(K.settings, d);

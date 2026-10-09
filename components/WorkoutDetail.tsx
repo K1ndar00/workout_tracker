@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, Workout } from '@/lib/types';
-import { createExercise } from '@/lib/utils';
+import { Exercise, Workout } from '@/shared/types';
+import { createExercise } from '@/shared/utils';
 import ExerciseBlock from './ExerciseBlock';
 import { Calendar, FileText, Plus } from 'lucide-react';
 

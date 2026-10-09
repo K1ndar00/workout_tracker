@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { DailyNutrition, NutritionSettings, Workout } from '@/lib/types';
-import { isToday } from '@/lib/utils';
+import { DailyNutrition, NutritionSettings, Workout } from '@/shared/types';
+import { isToday } from '@/shared/utils';
+import { computeProgress } from '@/shared/stats';
 
 interface Props {
   workouts: Workout[];
@@ -10,82 +11,11 @@ interface Props {
   settings: NutritionSettings;
 }
 
-function weekLabel(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric' }).format(date);
-}
-
-function getMondayOf(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 export default function ProgressView({ workouts, nutritionLogs, settings }: Props) {
-  const stats = useMemo(() => {
-    // Weekly workout counts (last 8 weeks)
-    const now = new Date();
-    const weeks = Array.from({ length: 8 }, (_, i) => {
-      const monday = getMondayOf(now);
-      monday.setDate(monday.getDate() - i * 7);
-      const sunday = new Date(monday);
-      sunday.setDate(sunday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
-      return { monday, sunday, label: weekLabel(monday) };
-    }).reverse();
-
-    const weekCounts = weeks.map((w) => ({
-      label: w.label,
-      count: workouts.filter((wo) => {
-        const d = new Date(wo.date + 'T00:00:00');
-        return d >= w.monday && d <= w.sunday;
-      }).length,
-    }));
-
-    // Current week count
-    const thisWeekMonday = getMondayOf(now);
-    const thisWeekCount = workouts.filter((wo) => {
-      const d = new Date(wo.date + 'T00:00:00');
-      return d >= thisWeekMonday;
-    }).length;
-
-    // Total workouts this month
-    const thisMonth = now.toISOString().slice(0, 7);
-    const thisMonthCount = workouts.filter((w) => w.date.startsWith(thisMonth)).length;
-
-    // Exercise PRs
-    const prMap = new Map<string, number>();
-    for (const wo of workouts) {
-      for (const ex of wo.exercises) {
-        if (!ex.name) continue;
-        const maxWeight = Math.max(...ex.sets.map((s) => s.weight));
-        if (maxWeight > 0) {
-          const prev = prMap.get(ex.name) ?? 0;
-          if (maxWeight > prev) prMap.set(ex.name, maxWeight);
-        }
-      }
-    }
-    const prs = Array.from(prMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-
-    // Calorie trend last 7 days
-    const calTrend = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      const dateStr = d.toISOString().slice(0, 10);
-      const log = nutritionLogs.find((n) => n.date === dateStr);
-      const kcal = log?.meals.flatMap((m) => m.foods).reduce((a, f) => a + f.calories, 0) ?? 0;
-      return { date: dateStr, kcal, label: new Intl.DateTimeFormat('ja-JP', { weekday: 'short' }).format(d) };
-    });
-
-    const maxWeekCount = Math.max(...weekCounts.map((w) => w.count), 1);
-    const maxKcal = Math.max(...calTrend.map((d) => d.kcal), settings.targetCalories);
-
-    return { weekCounts, thisWeekCount, thisMonthCount, prs, calTrend, maxWeekCount, maxKcal };
-  }, [workouts, nutritionLogs, settings.targetCalories]);
+  const stats = useMemo(
+    () => computeProgress(workouts, nutritionLogs, settings),
+    [workouts, nutritionLogs, settings]
+  );
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 md:px-12 md:py-14">
@@ -97,7 +27,7 @@ export default function ProgressView({ workouts, nutritionLogs, settings }: Prop
           { label: '今週', value: stats.thisWeekCount, unit: '回' },
           { label: '今月', value: stats.thisMonthCount, unit: '回' },
           { label: '累計', value: workouts.length, unit: '回' },
-          { label: '種目数', value: new Set(workouts.flatMap((w) => w.exercises.map((e) => e.name)).filter(Boolean)).size, unit: '種目' },
+          { label: '種目数', value: stats.exerciseCount, unit: '種目' },
         ].map(({ label, value, unit }) => (
           <div key={label} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div className="text-2xl font-bold text-gray-900">{value}<span className="text-sm font-normal text-gray-400 ml-0.5">{unit}</span></div>
