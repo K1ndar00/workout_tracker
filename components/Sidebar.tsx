@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/lib/types';
-import { formatDate, formatDayLabel, formatMonthKey, today } from '@/lib/utils';
-import { BarChart2, ClipboardList, Dumbbell, Plus, Trash2, TrendingUp, UtensilsCrossed, X } from 'lucide-react';
+import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
+import { formatDate, formatDayLabel, formatMonthKey, today } from '@/shared/utils';
+import { BarChart2, ClipboardList, Dumbbell, LogOut, Plus, Trash2, TrendingUp, UtensilsCrossed, X } from 'lucide-react';
+import type { SyncStatus } from '@/shared/useAppData';
 
 const NAV: { id: AppView; label: string; Icon: React.ElementType }[] = [
   { id: 'workouts', label: '記録', Icon: Dumbbell },
@@ -33,7 +34,19 @@ interface SidebarProps {
   nutritionLogs: DailyNutrition[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
+  // account / sync
+  syncStatus: SyncStatus;
+  syncError: string | null;
+  signedIn: boolean;
+  onSignOut: () => void;
 }
+
+const SYNC_LABEL: Record<SyncStatus, { text: string; dot: string }> = {
+  local: { text: 'この端末のみに保存', dot: 'bg-gray-300' },
+  syncing: { text: '同期中…', dot: 'bg-amber-400' },
+  synced: { text: '同期済み', dot: 'bg-emerald-500' },
+  error: { text: '同期エラー(自動で再試行)', dot: 'bg-red-500' },
+};
 
 function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
   const groups = new Map<string, Workout[]>();
@@ -225,6 +238,19 @@ export default function Sidebar(props: SidebarProps) {
           </button>
         </div>
       )}
+
+      {/* Sync status / account */}
+      <div className="px-3 py-2.5 border-t border-gray-200 shrink-0 flex items-center gap-2 text-[11px] text-gray-500">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SYNC_LABEL[props.syncStatus].dot}`} />
+        <span className="flex-1 truncate" title={props.syncError ?? undefined}>
+          {SYNC_LABEL[props.syncStatus].text}
+        </span>
+        {props.signedIn && (
+          <button onClick={props.onSignOut} title="ログアウト" className="p-1 rounded hover:bg-gray-200 text-gray-500">
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </aside>
   );
 }
