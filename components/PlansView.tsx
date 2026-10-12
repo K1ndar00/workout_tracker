@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlanDay, PlanExercise, TrainingPlan } from '@/lib/types';
-import { createPlanDay, createPlanExercise } from '@/lib/utils';
+import { PlanDay, PlanExercise, TrainingPlan } from '@/shared/types';
+import { createPlanDay, createPlanExercise } from '@/shared/utils';
 import { ChevronDown, ChevronRight, Dumbbell, Plus, Trash2 } from 'lucide-react';
 
 const EMOJIS = ['🗓️', '💪', '🏋️', '🤸', '🏃', '🚴', '🔥', '⚡', '🦵', '🦾', '🏆', '🎯'];
