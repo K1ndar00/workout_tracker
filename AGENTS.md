@@ -27,7 +27,7 @@ app/ components/ lib/   Web 版 (Next.js)
 mobile/                 モバイル版 (Expo / React Native)
 shared/                 Web・モバイル共通コード(型・ユーティリティ・同期・データ用フック)
 supabase/migrations/    データベース定義(SQL)
-docs/                   設計ドキュメント(必要に応じて作成。現時点では未作成)
+docs/                   設計・計画・テスト仕様などのドキュメント(既存コードから作成したドラフト)
 ```
 
 - 画面に依存しない共通ロジックは `shared/` に置く。Web・モバイル両方で使うため、片方専用の API(DOM、`localStorage` 等)を直接使わない。
