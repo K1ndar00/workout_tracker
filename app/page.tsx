@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { AppView, TrainingPlan, Workout } from '@/shared/types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppView, ExerciseMaster, PartId, TrainingPlan, Workout } from '@/shared/types';
+import { allExercises, findOrCreateExercise, usedExerciseIds } from '@/shared/exercises';
 import { useAppData } from '@/shared/useAppData';
 import { createPlan, createWorkout } from '@/shared/utils';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +13,7 @@ import WorkoutDetail from '@/components/WorkoutDetail';
 import EmptyState from '@/components/EmptyState';
 import PlansView from '@/components/PlansView';
 import ProgressView from '@/components/ProgressView';
+import ExercisesView from '@/components/ExercisesView';
 import { Menu, Plus } from 'lucide-react';
 
 export default function Home() {
@@ -32,6 +34,8 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
     setWorkouts,
     plans,
     setPlans,
+    exercises,
+    setExercises,
   } = useAppData({ client: supabase, userId, storage: webStorage });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -97,6 +101,31 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
     });
   }, []);
 
+  // Exercise master handlers
+  const masters = useMemo(() => allExercises(exercises), [exercises]);
+  const usedIds = useMemo(() => usedExerciseIds(workouts, plans), [workouts, plans]);
+
+  const handleCreateMaster = useCallback(
+    (name: string, part: PartId): ExerciseMaster => {
+      const { master, created } = findOrCreateExercise(exercises, name, part);
+      if (created) setExercises((prev) => [...prev, master]);
+      return master;
+    },
+    [exercises]
+  );
+
+  const handleUpdateMaster = useCallback((updated: ExerciseMaster) => {
+    setExercises((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+  }, []);
+
+  const handleDeleteMaster = useCallback(
+    (id: string) => {
+      if (usedIds.has(id)) return; // referenced by a record: keep it
+      setExercises((prev) => prev.filter((m) => m.id !== id));
+    },
+    [usedIds]
+  );
+
   const selectedWorkout = workouts.find((w) => w.id === selectedWorkoutId) ?? null;
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null;
 
@@ -105,6 +134,8 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
       ? selectedWorkout ? `${selectedWorkout.emoji} ${selectedWorkout.title}` : 'ワークアウト記録'
       : view === 'plans'
       ? selectedPlan ? `${selectedPlan.emoji} ${selectedPlan.name}` : 'トレーニング計画'
+      : view === 'exercises'
+      ? '種目'
       : '進捗';
 
   const showMobileNew = view === 'workouts' || view === 'plans';
@@ -159,18 +190,27 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
         <div className="flex-1">
           {view === 'workouts' && (
             selectedWorkout
-              ? <WorkoutDetail workout={selectedWorkout} onChange={handleUpdateWorkout} />
+              ? <WorkoutDetail workout={selectedWorkout} onChange={handleUpdateWorkout} masters={masters} onCreateMaster={handleCreateMaster} />
               : <EmptyState onNew={handleNewWorkout} />
           )}
           {view === 'plans' && (
             selectedPlan
-              ? <PlansView plan={selectedPlan} onChange={handleUpdatePlan} onNew={handleNewPlan} />
+              ? <PlansView plan={selectedPlan} onChange={handleUpdatePlan} onNew={handleNewPlan} masters={masters} onCreateMaster={handleCreateMaster} />
               : <div className="flex flex-col items-center justify-center h-full gap-4">
                   <p className="text-gray-400 text-sm">プランがありません</p>
                   <button onClick={handleNewPlan} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700">
                     <Plus className="w-4 h-4" />新しいプランを作成
                   </button>
                 </div>
+          )}
+          {view === 'exercises' && (
+            <ExercisesView
+              masters={masters}
+              usedIds={usedIds}
+              onCreate={handleCreateMaster}
+              onUpdate={handleUpdateMaster}
+              onDelete={handleDeleteMaster}
+            />
           )}
           {view === 'progress' && (
             <ProgressView workouts={workouts} />
