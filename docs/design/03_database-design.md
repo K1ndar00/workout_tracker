@@ -25,7 +25,7 @@ documents
 | カラム | 型 | NULL | デフォルト | 説明 |
 | --- | --- | --- | --- | --- |
 | `user_id` | uuid | 不可 | `auth.uid()` | 所有者。`auth.users(id)` への外部キー(`on delete cascade`) |
-| `collection` | text | 不可 | - | 種類。`workouts` / `plans` のみ(CHECK 制約。0002 適用後) |
+| `collection` | text | 不可 | - | 種類。`workouts` / `plans` / `exercises` のみ(CHECK 制約。0002・0003 適用後) |
 | `key` | text | 不可 | - | ドキュメント ID(下表) |
 | `data` | jsonb | 不可 | - | ドキュメント本体 |
 | `updated_at` | timestamptz | 不可 | `now()` | 更新日時。更新時にトリガーで自動更新 |
@@ -41,6 +41,7 @@ documents
 | --- | --- | --- |
 | `workouts` | ワークアウトの `id` | `Workout`(タイトル・日付・種目・セット・メモなど) |
 | `plans` | 計画の `id` | `TrainingPlan`(名前・曜日ごとの種目・有効フラグなど) |
+| `exercises` | 種目の `id` | `ExerciseMaster`(ユーザーが追加した種目。初期種目はコード内で保存しない。詳細は `05_exercise-master.md`) |
 
 
 ## 4. セキュリティ(RLS)

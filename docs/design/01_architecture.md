@@ -40,7 +40,7 @@
 
 | 場所 | 役割 |
 | --- | --- |
-| `app/page.tsx` | Web のメイン画面。3 つのビュー(`workouts` / `plans` / `progress`)を切り替える |
+| `app/page.tsx` | Web のメイン画面。4 つのビュー(`workouts` / `plans` / `exercises` / `progress`)を切り替える |
 | `components/` | Web の UI 部品(`AuthGate`, `Sidebar`, `WorkoutDetail`, `PlansView`, `ProgressView` など) |
 | `lib/supabase.ts` | Web 用の Supabase クライアント生成。環境変数が未設定なら `null`(ローカルモード) |
 | `lib/storage.ts` | Web 用ストレージ(`localStorage`)。同期導入前のデータを最初のアカウントに引き継ぐ処理を含む |
@@ -49,6 +49,7 @@
 | `shared/types.ts` | データ型(Workout, TrainingPlan など)。Web・モバイル共通の定義元 |
 | `shared/useAppData.ts` | **データの唯一の管理場所**となる React フック。ローカルキャッシュ・同期・リアルタイム購読をまとめる |
 | `shared/sync.ts` | `SyncEngine`(pull / push)と、3 点比較のマージ関数 `reconcile` |
+| `shared/exercises.ts` | 部位・初期種目・種目マスタの取り込み処理(`05_exercise-master.md`) |
 | `shared/stats.ts`, `utils.ts` | 進捗の集計・日付などのユーティリティ |
 | `supabase/migrations/0001_init.sql` | DB 定義(テーブル・RLS・トリガー・Realtime) |
 

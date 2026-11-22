@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, AppState, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
 import { useAppData } from '../shared/useAppData';
+import { allExercises, findOrCreateExercise, usedExerciseIds } from '../shared/exercises';
+import type { ExerciseMaster, PartId } from '../shared/types';
 import { supabase } from './src/supabase';
 import { nativeStorage } from './src/storage';
 import { c } from './src/theme';
@@ -11,14 +13,16 @@ import { Icon, IconName } from './src/ui';
 import AuthScreen from './src/screens/AuthScreen';
 import WorkoutsScreen from './src/screens/WorkoutsScreen';
 import PlansScreen from './src/screens/PlansScreen';
+import ExercisesScreen from './src/screens/ExercisesScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import AccountScreen from './src/screens/AccountScreen';
 
-type Tab = 'workouts' | 'plans' | 'progress' | 'account';
+type Tab = 'workouts' | 'plans' | 'exercises' | 'progress' | 'account';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'workouts', label: '記録', icon: 'barbell-outline' },
   { id: 'plans', label: '計画', icon: 'clipboard-outline' },
+  { id: 'exercises', label: '種目', icon: 'list-outline' },
   { id: 'progress', label: '進捗', icon: 'trending-up-outline' },
   { id: 'account', label: '設定', icon: 'person-circle-outline' },
 ];
@@ -70,6 +74,29 @@ function Main({ userId, email }: { userId: string | null; email: string | null }
   const d = useAppData({ client: supabase, userId, storage: nativeStorage });
   const [tab, setTab] = useState<Tab>('workouts');
 
+  const masters = useMemo(() => allExercises(d.exercises), [d.exercises]);
+  const usedIds = useMemo(() => usedExerciseIds(d.workouts, d.plans), [d.workouts, d.plans]);
+
+  const createMaster = useCallback(
+    (name: string, part: PartId): ExerciseMaster => {
+      const { master, created } = findOrCreateExercise(d.exercises, name, part);
+      if (created) d.setExercises((prev) => [...prev, master]);
+      return master;
+    },
+    [d.exercises, d.setExercises]
+  );
+  const updateMaster = useCallback(
+    (m: ExerciseMaster) => d.setExercises((prev) => prev.map((x) => (x.id === m.id ? m : x))),
+    [d.setExercises]
+  );
+  const deleteMaster = useCallback(
+    (id: string) => {
+      if (usedIds.has(id)) return; // referenced by a record: keep it
+      d.setExercises((prev) => prev.filter((x) => x.id !== id));
+    },
+    [d.setExercises, usedIds]
+  );
+
   // Pull when the app returns to the foreground.
   useEffect(() => {
     if (!supabase) return;
@@ -84,8 +111,11 @@ function Main({ userId, email }: { userId: string | null; email: string | null }
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top', 'bottom']}>
       <View style={{ flex: 1 }}>
-        {tab === 'workouts' && <WorkoutsScreen workouts={d.workouts} setWorkouts={d.setWorkouts} />}
-        {tab === 'plans' && <PlansScreen plans={d.plans} setPlans={d.setPlans} />}
+        {tab === 'workouts' && <WorkoutsScreen workouts={d.workouts} setWorkouts={d.setWorkouts} masters={masters} onCreateMaster={createMaster} />}
+        {tab === 'plans' && <PlansScreen plans={d.plans} setPlans={d.setPlans} masters={masters} onCreateMaster={createMaster} />}
+        {tab === 'exercises' && (
+          <ExercisesScreen masters={masters} usedIds={usedIds} onCreate={createMaster} onUpdate={updateMaster} onDelete={deleteMaster} />
+        )}
         {tab === 'progress' && <ProgressScreen workouts={d.workouts} />}
         {tab === 'account' && (
           <AccountScreen
