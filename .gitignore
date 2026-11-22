@@ -14,3 +14,10 @@ out/
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Python analysis (analysis/): downloaded personal data, generated charts, caches
+analysis/data/
+analysis/output/
+__pycache__/
+.pytest_cache/
+.venv/
