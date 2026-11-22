@@ -9,8 +9,13 @@
 --   * exercise rows with an empty name are dropped (together with their sets).
 --
 -- Run it in the Supabase SQL Editor (it runs with full rights, so RLS does not get in the way).
+--
+-- The whole script is ONE statement (a DO block). The SQL Editor may run statements one by one,
+-- which would drop the temporary tables between them; a single statement is atomic either way:
+-- it works completely or not at all.
 
-begin;
+do $migrate$
+begin
 
 -- 1) every exercise name used in old workouts and plans
 create temp table _names on commit drop as
@@ -106,7 +111,8 @@ on conflict (id) do nothing;
 
 drop view _ex;
 
-commit;
+end
+$migrate$;
 
 -- Check the result (compare with what you expect):
 --   select (select count(*) from documents where collection = 'workouts') as old_workouts,
