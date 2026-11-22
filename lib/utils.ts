@@ -22,15 +22,14 @@ export function createSet(template?: Partial<WorkoutSet>): WorkoutSet {
 }
 
 export function createExercise(): Exercise {
-  return { id: uid(), name: '', sets: [createSet()] };
+  return { id: uid(), sets: [createSet()] };
 }
 
 export function createWorkout(): Workout {
-  const today = new Date().toISOString().slice(0, 10);
   return {
     id: uid(),
     title: '新しいワークアウト',
-    date: today,
+    date: today(),
     emoji: '🏋️',
     exercises: [],
     notes: '',
@@ -39,7 +38,7 @@ export function createWorkout(): Workout {
 }
 
 export function createPlanExercise(): PlanExercise {
-  return { id: uid(), name: '', sets: 3, reps: '10' };
+  return { id: uid(), sets: 3, reps: '10' };
 }
 
 export function createPlanDay(index: number): PlanDay {
@@ -70,14 +69,21 @@ export function formatMonthKey(key: string): string {
   return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'long' }).format(date);
 }
 
+/** YYYY-MM-DD in the local time zone (toISOString would give the UTC date, which is "yesterday" in Japan until 9:00). */
+export function toDateString(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 export function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toDateString(new Date());
 }
 
 export function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return toDateString(d);
 }
 
 export function isToday(dateStr: string): boolean {

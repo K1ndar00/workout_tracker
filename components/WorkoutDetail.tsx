@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, ExerciseMaster, PartId, Workout } from '@/shared/types';
-import { createExercise } from '@/shared/utils';
+import { Exercise, ExerciseMaster, PartId, Workout } from '@/lib/types';
+import { createExercise } from '@/lib/utils';
 import ExerciseBlock from './ExerciseBlock';
 import { Calendar, FileText, Plus } from 'lucide-react';
 
@@ -12,7 +12,7 @@ interface WorkoutDetailProps {
   workout: Workout;
   onChange: (workout: Workout) => void;
   masters: ExerciseMaster[];
-  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
 export default function WorkoutDetail({ workout, onChange, masters, onCreateMaster }: WorkoutDetailProps) {

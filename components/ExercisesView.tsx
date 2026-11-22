@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseMaster, PartId } from '@/shared/types';
-import { PARTS, SELECTABLE_PARTS, isDefaultExercise } from '@/shared/exercises';
+import { ExerciseMaster, PartId } from '@/lib/types';
+import { PARTS, SELECTABLE_PARTS } from '@/lib/exercises';
 import { Plus, Trash2 } from 'lucide-react';
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
   masters: ExerciseMaster[];
   /** Ids referenced by a workout or plan: these cannot be deleted. */
   usedIds: Set<string>;
-  onCreate: (name: string, part: PartId) => ExerciseMaster;
+  onCreate: (name: string, part: PartId) => Promise<ExerciseMaster>;
   onUpdate: (master: ExerciseMaster) => void;
   onDelete: (id: string) => void;
 }
@@ -19,10 +19,14 @@ export default function ExercisesView({ masters, usedIds, onCreate, onUpdate, on
   const [name, setName] = useState('');
   const [part, setPart] = useState<PartId>('chest');
 
-  function add() {
+  async function add() {
     if (!name.trim()) return;
-    onCreate(name, part);
-    setName('');
+    try {
+      await onCreate(name, part);
+      setName('');
+    } catch {
+      // the error is shown by the page (notice)
+    }
   }
 
   return (
@@ -36,7 +40,7 @@ export default function ExercisesView({ masters, usedIds, onCreate, onUpdate, on
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && add()}
+          onKeyDown={(e) => e.key === 'Enter' && void add()}
           placeholder="新しい種目名"
           className="flex-1 min-w-[10rem] text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none"
         />
@@ -52,7 +56,7 @@ export default function ExercisesView({ masters, usedIds, onCreate, onUpdate, on
           ))}
         </select>
         <button
-          onClick={add}
+          onClick={() => void add()}
           disabled={!name.trim()}
           className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg bg-gray-900 text-white disabled:opacity-40"
         >
@@ -102,7 +106,7 @@ function Row({
   onUpdate: (m: ExerciseMaster) => void;
   onDelete: () => void;
 }) {
-  const isDefault = isDefaultExercise(master.id);
+  const isDefault = master.builtIn;
   const [draft, setDraft] = useState(master.name);
 
   function commitName() {

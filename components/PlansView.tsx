@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseMaster, PartId, PlanDay, PlanExercise, TrainingPlan } from '@/shared/types';
+import { ExerciseMaster, PartId, PlanDay, PlanExercise, TrainingPlan } from '@/lib/types';
 import ExercisePicker from './ExercisePicker';
-import { createPlanDay, createPlanExercise } from '@/shared/utils';
+import { createPlanDay, createPlanExercise } from '@/lib/utils';
 import { ChevronDown, ChevronRight, Dumbbell, Plus, Trash2 } from 'lucide-react';
 
 const EMOJIS = ['🗓️', '💪', '🏋️', '🤸', '🏃', '🚴', '🔥', '⚡', '🦵', '🦾', '🏆', '🎯'];
@@ -13,7 +13,7 @@ interface Props {
   onChange: (plan: TrainingPlan) => void;
   onNew: () => void;
   masters: ExerciseMaster[];
-  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
 export default function PlansView({ plan, onChange, onNew, masters, onCreateMaster }: Props) {
@@ -155,7 +155,7 @@ function DaySection({
   onDelete: () => void;
   canDelete: boolean;
   masters: ExerciseMaster[];
-  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }) {
   function updateExercise(ex: PlanExercise) {
     onChange({ ...day, exercises: day.exercises.map((e) => (e.id === ex.id ? ex : e)) });
@@ -226,7 +226,7 @@ function ExerciseRow({
   onChange: (e: PlanExercise) => void;
   onDelete: () => void;
   masters: ExerciseMaster[];
-  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -238,9 +238,8 @@ function ExerciseRow({
       <Dumbbell className="w-3.5 h-3.5 text-gray-300 shrink-0" />
       <ExercisePicker
         exerciseId={ex.exerciseId}
-        name={ex.name}
         masters={masters}
-        onSelect={(m) => onChange({ ...ex, exerciseId: m.id, name: m.name })}
+        onSelect={(m) => onChange({ ...ex, exerciseId: m.id })}
         onCreate={onCreateMaster}
         selectClassName="w-full text-sm text-gray-700 bg-transparent border-none outline-none cursor-pointer"
       />

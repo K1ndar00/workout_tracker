@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, ExerciseMaster, PartId, WorkoutSet } from '@/shared/types';
+import { Exercise, ExerciseMaster, PartId, WorkoutSet } from '@/lib/types';
 import ExercisePicker from './ExercisePicker';
-import { createSet } from '@/shared/utils';
+import { createSet } from '@/lib/utils';
 import { Check, GripVertical, Plus, Trash2 } from 'lucide-react';
 
 interface ExerciseBlockProps {
@@ -12,7 +12,7 @@ interface ExerciseBlockProps {
   onDelete: () => void;
   autoFocus?: boolean;
   masters: ExerciseMaster[];
-  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
 export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus, masters, onCreateMaster }: ExerciseBlockProps) {
@@ -68,9 +68,8 @@ export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus,
         <ExercisePicker
           ref={nameRef}
           exerciseId={exercise.exerciseId}
-          name={exercise.name}
           masters={masters}
-          onSelect={(m) => onChange({ ...exercise, exerciseId: m.id, name: m.name })}
+          onSelect={(m) => onChange({ ...exercise, exerciseId: m.id })}
           onCreate={onCreateMaster}
         />
         <div className="flex items-center gap-2">

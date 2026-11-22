@@ -1,12 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AppView, ExerciseMaster, PartId, TrainingPlan, Workout } from '@/shared/types';
-import { allExercises, findOrCreateExercise, usedExerciseIds } from '@/shared/exercises';
-import { useAppData } from '@/shared/useAppData';
-import { createPlan, createWorkout } from '@/shared/utils';
-import { supabase } from '@/lib/supabase';
-import { webStorage } from '@/lib/storage';
+import { AppView } from '@/lib/types';
+import { usedExerciseIds } from '@/lib/exercises';
+import { useData } from '@/lib/useData';
+import { createPlan, createWorkout } from '@/lib/utils';
 import AuthGate from '@/components/AuthGate';
 import Sidebar from '@/components/Sidebar';
 import WorkoutDetail from '@/components/WorkoutDetail';
@@ -14,116 +12,56 @@ import EmptyState from '@/components/EmptyState';
 import PlansView from '@/components/PlansView';
 import ProgressView from '@/components/ProgressView';
 import ExercisesView from '@/components/ExercisesView';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, X } from 'lucide-react';
 
 export default function Home() {
   return (
     <AuthGate>
-      {(userId, signOut) => <WorkoutApp key={userId ?? 'local'} userId={userId} onSignOut={signOut} />}
+      {(userId, signOut) => <WorkoutApp key={userId} onSignOut={signOut} />}
     </AuthGate>
   );
 }
 
-function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: () => void }) {
-  const {
-    ready: isLoaded,
-    status: syncStatus,
-    lastError: syncError,
-    sync,
-    workouts,
-    setWorkouts,
-    plans,
-    setPlans,
-    exercises,
-    setExercises,
-  } = useAppData({ client: supabase, userId, storage: webStorage });
+function WorkoutApp({ onSignOut }: { onSignOut: () => void }) {
+  const data = useData();
+  const { workouts, plans, exercises } = data;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<AppView>('workouts');
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
-  // Pick the first item once the data has loaded, and again if the selection disappears
-  // (e.g. it was deleted on another device).
+  // Pick the first item once the data has loaded, and again if the selection disappears.
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!data.ready) return;
     if (!workouts.some((w) => w.id === selectedWorkoutId)) setSelectedWorkoutId(workouts[0]?.id ?? null);
     if (!plans.some((p) => p.id === selectedPlanId)) setSelectedPlanId(plans[0]?.id ?? null);
-  }, [isLoaded, workouts, plans, selectedWorkoutId, selectedPlanId]);
+  }, [data.ready, workouts, plans, selectedWorkoutId, selectedPlanId]);
 
-  // Refresh when the tab becomes visible again.
-  useEffect(() => {
-    if (!supabase) return;
-    const onVisible = () => { if (document.visibilityState === 'visible') void sync(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [sync]);
+  const usedIds = useMemo(() => usedExerciseIds(workouts, plans), [workouts, plans]);
 
-  // Workout handlers
   const handleNewWorkout = useCallback(() => {
     const w = createWorkout();
-    setWorkouts((prev) => [w, ...prev]);
+    data.addWorkout(w);
     setSelectedWorkoutId(w.id);
     setView('workouts');
     setSidebarOpen(false);
-  }, []);
+  }, [data.addWorkout]);
 
-  const handleUpdateWorkout = useCallback((updated: Workout) => {
-    setWorkouts((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
-  }, []);
-
-  const handleDeleteWorkout = useCallback((id: string) => {
-    setWorkouts((prev) => {
-      const remaining = prev.filter((w) => w.id !== id);
-      setSelectedWorkoutId(remaining[0]?.id ?? null);
-      return remaining;
-    });
-  }, []);
-
-  // Plan handlers
   const handleNewPlan = useCallback(() => {
     const p = createPlan();
-    setPlans((prev) => [p, ...prev]);
+    data.addPlan(p);
     setSelectedPlanId(p.id);
     setView('plans');
     setSidebarOpen(false);
-  }, []);
-
-  const handleUpdatePlan = useCallback((updated: TrainingPlan) => {
-    setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-  }, []);
-
-  const handleDeletePlan = useCallback((id: string) => {
-    setPlans((prev) => {
-      const remaining = prev.filter((p) => p.id !== id);
-      setSelectedPlanId(remaining[0]?.id ?? null);
-      return remaining;
-    });
-  }, []);
-
-  // Exercise master handlers
-  const masters = useMemo(() => allExercises(exercises), [exercises]);
-  const usedIds = useMemo(() => usedExerciseIds(workouts, plans), [workouts, plans]);
-
-  const handleCreateMaster = useCallback(
-    (name: string, part: PartId): ExerciseMaster => {
-      const { master, created } = findOrCreateExercise(exercises, name, part);
-      if (created) setExercises((prev) => [...prev, master]);
-      return master;
-    },
-    [exercises]
-  );
-
-  const handleUpdateMaster = useCallback((updated: ExerciseMaster) => {
-    setExercises((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
-  }, []);
+  }, [data.addPlan]);
 
   const handleDeleteMaster = useCallback(
     (id: string) => {
-      if (usedIds.has(id)) return; // referenced by a record: keep it
-      setExercises((prev) => prev.filter((m) => m.id !== id));
+      if (usedIds.has(id)) return; // the database refuses too; this just avoids the round trip
+      void data.removeExercise(id);
     },
-    [usedIds]
+    [usedIds, data.removeExercise]
   );
 
   const selectedWorkout = workouts.find((w) => w.id === selectedWorkoutId) ?? null;
@@ -140,7 +78,18 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
 
   const showMobileNew = view === 'workouts' || view === 'plans';
 
-  if (!isLoaded) return null;
+  if (data.loadFailed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm text-gray-700">データを読み込めませんでした。</p>
+        {data.notice && <p className="text-xs text-gray-400 break-all">{data.notice}</p>}
+        <button onClick={() => { data.clearNotice(); void data.reload(); }} className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm">
+          再読み込み
+        </button>
+      </div>
+    );
+  }
+  if (!data.ready) return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
@@ -157,15 +106,14 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
         selectedWorkoutId={selectedWorkoutId}
         onSelectWorkout={(id) => { setSelectedWorkoutId(id); setSidebarOpen(false); }}
         onNewWorkout={handleNewWorkout}
-        onDeleteWorkout={handleDeleteWorkout}
+        onDeleteWorkout={data.removeWorkout}
         plans={plans}
         selectedPlanId={selectedPlanId}
         onSelectPlan={(id) => { setSelectedPlanId(id); setSidebarOpen(false); }}
         onNewPlan={handleNewPlan}
-        onDeletePlan={handleDeletePlan}
-        syncStatus={syncStatus}
-        syncError={syncError}
-        signedIn={userId !== null}
+        onDeletePlan={data.removePlan}
+        saveStatus={data.saveStatus}
+        onRetrySave={() => void data.retrySave()}
         onSignOut={onSignOut}
       />
 
@@ -186,16 +134,25 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
           )}
         </div>
 
+        {data.notice && (
+          <div className="flex items-start gap-2 px-4 py-2 bg-red-50 text-red-600 text-xs shrink-0">
+            <span className="flex-1 break-all">{data.notice}</span>
+            <button onClick={data.clearNotice} aria-label="閉じる" className="p-0.5 hover:text-red-800">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Views */}
         <div className="flex-1">
           {view === 'workouts' && (
             selectedWorkout
-              ? <WorkoutDetail workout={selectedWorkout} onChange={handleUpdateWorkout} masters={masters} onCreateMaster={handleCreateMaster} />
+              ? <WorkoutDetail workout={selectedWorkout} onChange={data.updateWorkout} masters={exercises} onCreateMaster={data.createExercise} />
               : <EmptyState onNew={handleNewWorkout} />
           )}
           {view === 'plans' && (
             selectedPlan
-              ? <PlansView plan={selectedPlan} onChange={handleUpdatePlan} onNew={handleNewPlan} masters={masters} onCreateMaster={handleCreateMaster} />
+              ? <PlansView plan={selectedPlan} onChange={data.updatePlan} onNew={handleNewPlan} masters={exercises} onCreateMaster={data.createExercise} />
               : <div className="flex flex-col items-center justify-center h-full gap-4">
                   <p className="text-gray-400 text-sm">プランがありません</p>
                   <button onClick={handleNewPlan} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700">
@@ -205,16 +162,14 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
           )}
           {view === 'exercises' && (
             <ExercisesView
-              masters={masters}
+              masters={exercises}
               usedIds={usedIds}
-              onCreate={handleCreateMaster}
-              onUpdate={handleUpdateMaster}
+              onCreate={data.createExercise}
+              onUpdate={(m) => void data.changeExercise(m)}
               onDelete={handleDeleteMaster}
             />
           )}
-          {view === 'progress' && (
-            <ProgressView workouts={workouts} />
-          )}
+          {view === 'progress' && <ProgressView workouts={workouts} masters={exercises} />}
         </div>
       </main>
     </div>
