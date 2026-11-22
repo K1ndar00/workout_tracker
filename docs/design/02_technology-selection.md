@@ -29,6 +29,11 @@
 ### 正規化した PostgreSQL スキーマ
 - 判断の経緯は `06_redesign-adr.md`。集計(進捗・Python 分析)を SQL で書きやすくするため。
 
+### Python(pandas / matplotlib / requests)— 分析スクリプト
+- **選定理由**: 開発者の希望(Python の学習)。分析は pandas が標準的。
+- **構成**: アプリ本体とは独立(`analysis/`)。BigQuery は使わない(データ量が小さく、Supabase で足りるため)。
+- **デメリット**: アプリの画面には組み込まれない(CSV とグラフ画像の出力)。
+
 ## 削除した技術
 - Expo / React Native(モバイル版)。ブラウザで使えるため。
 - 独自の同期エンジン。オンライン前提に簡素化したため。

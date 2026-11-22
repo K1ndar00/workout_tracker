@@ -8,6 +8,7 @@
 ├── app/ components/   画面(Next.js)
 ├── lib/               データ層(db.ts, useData.ts)・型・ユーティリティ
 ├── supabase/migrations/   データベース定義(SQL)
+├── analysis/          Python の分析スクリプト(pandas。アプリ本体とは独立)
 └── docs/              設計・計画・テスト仕様
 ```
 
@@ -41,6 +42,10 @@ npm run dev
 ```
 
 `.env.local` が未設定の場合は、設定を促す画面が表示されます。
+
+## 分析(Python)
+
+記録を pandas で分析するスクリプトが `analysis/` にあります。使い方は `analysis/README.md` を参照してください。
 
 ## 既知の制限
 

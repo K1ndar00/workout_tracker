@@ -25,6 +25,7 @@ Claude Code などの AI エージェント向けの指示書です。作業前�
 app/ components/       画面 (Next.js)
 lib/                   データ層(db.ts, useData.ts)・型・ユーティリティ
 supabase/migrations/    データベース定義(SQL)
+analysis/                Python の分析スクリプト(pandas。アプリ本体とは独立。`analysis/README.md`)
 docs/                   設計・計画・テスト仕様などのドキュメント(既存コードから作成したドラフト)
 ```
 
@@ -42,7 +43,7 @@ docs/                   設計・計画・テスト仕様などのドキュメ�
 
 ## 5. コーディング規約
 
-- 言語は TypeScript。型は `lib/types.ts` を共通の定義元とし、重複定義しない。
+- アプリは TypeScript。`analysis/` のみ Python(アプリのコードからは呼ばない)。型は `lib/types.ts` を共通の定義元とし、重複定義しない。
 - コンポーネントは役割ごとに分割する(例: `components/PlansView.tsx`)。不要な抽象化はしない。
 - 命名: コンポーネントは `PascalCase`、関数・変数は `camelCase`、定数は `UPPER_SNAKE_CASE`。
 - エラー処理を考慮する(特にネットワーク・保存まわり)。
