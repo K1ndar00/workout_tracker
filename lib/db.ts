@@ -1,5 +1,17 @@
 import { supabase } from './supabase';
-import type { Exercise, ExerciseMaster, PartId, PlanDay, PlanExercise, TrainingPlan, Workout, WorkoutSet } from './types';
+import type {
+  Exercise,
+  ExerciseDay,
+  ExerciseMaster,
+  ExerciseSummary,
+  PartId,
+  PartWeek,
+  PlanDay,
+  PlanExercise,
+  TrainingPlan,
+  Workout,
+  WorkoutSet,
+} from './types';
 
 /** All database access lives here. Components never talk to Supabase directly. */
 
@@ -185,4 +197,64 @@ export async function savePlan(p: TrainingPlan): Promise<void> {
 export async function deletePlan(id: string): Promise<void> {
   const { error } = await client().from('plans').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Progress (read-only views; only completed sets are counted, weights in kg)
+// ---------------------------------------------------------------------------
+
+/** Weekly volume per body part, from the Monday `sinceWeekStart` on. */
+export async function fetchPartWeekly(sinceWeekStart: string): Promise<PartWeek[]> {
+  const { data, error } = await client()
+    .from('v_part_weekly')
+    .select('week_start, part, sets, volume_kg')
+    .gte('week_start', sinceWeekStart);
+  if (error) throw error;
+  return (data as { week_start: string; part: PartId; sets: number; volume_kg: number }[]).map((r) => ({
+    weekStart: r.week_start,
+    part: r.part,
+    sets: Number(r.sets),
+    volumeKg: Number(r.volume_kg),
+  }));
+}
+
+/** One row per exercise that has at least one completed set, most recently done first. */
+export async function fetchExerciseSummary(): Promise<ExerciseSummary[]> {
+  const { data, error } = await client()
+    .from('v_exercise_summary')
+    .select('exercise_id, exercise_name, part, sessions, total_volume_kg, best_weight_kg, last_date')
+    .order('last_date', { ascending: false });
+  if (error) throw error;
+  type Row = {
+    exercise_id: string;
+    exercise_name: string;
+    part: PartId;
+    sessions: number;
+    total_volume_kg: number;
+    best_weight_kg: number;
+    last_date: string;
+  };
+  return (data as Row[]).map((r) => ({
+    exerciseId: r.exercise_id,
+    name: r.exercise_name,
+    part: r.part,
+    sessions: Number(r.sessions),
+    totalVolumeKg: Number(r.total_volume_kg),
+    bestWeightKg: Number(r.best_weight_kg),
+    lastDate: r.last_date,
+  }));
+}
+
+/** The most recent `limit` training days of one exercise, oldest first. */
+export async function fetchExerciseHistory(exerciseId: string, limit = 12): Promise<ExerciseDay[]> {
+  const { data, error } = await client()
+    .from('v_exercise_daily')
+    .select('date, sets, volume_kg, max_weight_kg')
+    .eq('exercise_id', exerciseId)
+    .order('date', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as { date: string; sets: number; volume_kg: number; max_weight_kg: number }[])
+    .map((r) => ({ date: r.date, sets: Number(r.sets), volumeKg: Number(r.volume_kg), maxWeightKg: Number(r.max_weight_kg) }))
+    .reverse();
 }

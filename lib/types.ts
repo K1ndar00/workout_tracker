@@ -61,3 +61,28 @@ export interface TrainingPlan {
   isActive: boolean;
   createdAt: string;
 }
+
+// Progress (aggregated by the database, see supabase/migrations/0004_progress_views.sql)
+export interface PartWeek {
+  weekStart: string; // Monday, YYYY-MM-DD
+  part: PartId;
+  sets: number;
+  volumeKg: number;
+}
+
+export interface ExerciseSummary {
+  exerciseId: string;
+  name: string;
+  part: PartId;
+  sessions: number;
+  totalVolumeKg: number;
+  bestWeightKg: number;
+  lastDate: string;
+}
+
+export interface ExerciseDay {
+  date: string;
+  sets: number;
+  volumeKg: number;
+  maxWeightKg: number;
+}
