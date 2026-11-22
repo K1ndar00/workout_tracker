@@ -1,33 +1,37 @@
 # Workout Tracker
 
-筋トレ記録・トレーニング計画・進捗をまとめたアプリです。**Web 版**(Next.js)のアプリです。スマホもブラウザから使えます。データは Supabase に保存します。
+筋トレ記録・トレーニング計画・進捗をまとめた Web アプリです。スマホもブラウザから使えます。
+データは Supabase(PostgreSQL)に保存され、ログインが必要です。
 
 ```
 .
-├── app/ components/ lib/   Web 版 (Next.js)
-├── shared/                 型・ユーティリティ・同期エンジン・データ用フック
-└── supabase/migrations/    データベース定義
+├── app/ components/   画面(Next.js)
+├── lib/               データ層(db.ts, useData.ts)・型・ユーティリティ
+├── supabase/migrations/   データベース定義(SQL)
+└── docs/              設計・計画・テスト仕様
 ```
 
 ## 仕組み
 
-- データは Supabase の `documents` テーブル 1 枚に JSON として保存します(ユーザーごとに Row Level Security で分離)。
-- 各端末はローカルにもキャッシュを持つので、オフラインでも使えます。オンラインになると自動で同期します。
-- 同期は「ローカル / サーバー / 前回同期時点」の 3 点比較です(`shared/sync.ts`)。
-  - 別端末で追加・編集・削除した内容は、次の同期(リアルタイム通知・アプリ復帰時・起動時)で反映されます。
-  - **同じ項目を両方の端末で同時に(オフライン中に)編集した場合は、後から同期した側の内容が残ります。**
-- Supabase を設定しない場合は、これまで通りその端末だけに保存するローカルモードで動きます。
+- ブラウザが Supabase に直接アクセスします。専用のサーバーはありません。
+- データはサーバーが正です。入力は画面に即時反映され、約 1 秒後に自動保存されます(オフライン編集・端末間の同期はしません)。
+- ワークアウト・計画は、SQL 関数で 1 件ずつ**まとめて(トランザクションで)**保存します。
+- 種目は「種目マスタ」から選びます(初期種目 + 自分で追加)。記録で使われている種目は削除できません。
+- データ保護は Row Level Security で行い、自分のデータだけ読み書きできます。
+
+詳細は `docs/design/` を参照してください。
 
 ## セットアップ
 
 ### 1. Supabase
 
 1. [Supabase](https://supabase.com) でプロジェクトを作成します。
-2. SQL Editor で `supabase/migrations/0001_init.sql` を実行します(テーブル・RLS・リアルタイム設定)。
+2. SQL Editor で `supabase/migrations/0002_normalized_schema.sql` を実行します(テーブル・RLS・初期種目・保存関数・ビュー)。
+   - **旧バージョン(`documents` テーブル)のデータがある場合のみ**、先に `0001_init.sql` を実行済みであること、そのあと `0003_migrate_documents.sql` を実行して移行します。新規の場合は `0002` だけで足ります。
 3. Project Settings → API の **Project URL** と **anon public key** を控えます。
 4. (開発中に便利)Authentication → Providers → Email で「Confirm email」をオフにすると、確認メールなしで登録できます。
 
-### 2. Web 版
+### 2. 起動
 
 ```bash
 cp .env.example .env.local   # URL と anon key を記入
@@ -35,6 +39,10 @@ npm install
 npm run dev
 ```
 
+`.env.local` が未設定の場合は、設定を促す画面が表示されます。
+
 ## 既知の制限
 
-- 日付は UTC 基準で計算しています(`toISOString()`)。日本時間の 0〜9 時台は「前日」になることがあります(既存仕様)。
+- 同じワークアウトを複数のタブ・端末で同時に編集すると、後から保存した側が残ります。
+- 入力後 1 秒以内にタブを閉じると、最後の入力が保存されないことがあります。
+- 通信できない間は保存できません(「再試行」で保存します)。

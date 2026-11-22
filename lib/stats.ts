@@ -1,4 +1,5 @@
-import type { Workout } from './types';
+import type { ExerciseMaster, Workout } from './types';
+import { toDateString } from './utils';
 
 function weekLabel(date: Date): string {
   return new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric' }).format(date);
@@ -13,8 +14,10 @@ function getMondayOf(date: Date): Date {
   return d;
 }
 
-/** Numbers behind the progress screen; shared so web and mobile always agree. */
-export function computeProgress(workouts: Workout[]) {
+/** Numbers behind the progress screen. (To be redesigned around body parts / exercises.) */
+export function computeProgress(workouts: Workout[], masters: ExerciseMaster[]) {
+  const nameOf = new Map(masters.map((m) => [m.id, m.name]));
+  const exName = (e: { exerciseId?: string }) => (e.exerciseId && nameOf.get(e.exerciseId)) || '';
   // Weekly workout counts (last 8 weeks)
   const now = new Date();
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -37,20 +40,21 @@ export function computeProgress(workouts: Workout[]) {
   const thisWeekMonday = getMondayOf(now);
   const thisWeekCount = workouts.filter((wo) => new Date(wo.date + 'T00:00:00') >= thisWeekMonday).length;
 
-  const thisMonth = now.toISOString().slice(0, 7);
+  const thisMonth = toDateString(now).slice(0, 7);
   const thisMonthCount = workouts.filter((w) => w.date.startsWith(thisMonth)).length;
 
-  const exerciseCount = new Set(workouts.flatMap((w) => w.exercises.map((e) => e.name)).filter(Boolean)).size;
+  const exerciseCount = new Set(workouts.flatMap((w) => w.exercises.map(exName)).filter(Boolean)).size;
 
   // Exercise PRs
   const prMap = new Map<string, number>();
   for (const wo of workouts) {
     for (const ex of wo.exercises) {
-      if (!ex.name) continue;
+      const name = exName(ex);
+      if (!name) continue;
       const maxWeight = Math.max(...ex.sets.map((s) => s.weight));
       if (maxWeight > 0) {
-        const prev = prMap.get(ex.name) ?? 0;
-        if (maxWeight > prev) prMap.set(ex.name, maxWeight);
+        const prev = prMap.get(name) ?? 0;
+        if (maxWeight > prev) prMap.set(name, maxWeight);
       }
     }
   }

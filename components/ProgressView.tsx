@@ -1,15 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Workout } from '@/shared/types';
-import { computeProgress } from '@/shared/stats';
+import { ExerciseMaster, Workout } from '@/lib/types';
+import { computeProgress } from '@/lib/stats';
 
 interface Props {
   workouts: Workout[];
+  masters: ExerciseMaster[];
 }
 
-export default function ProgressView({ workouts }: Props) {
-  const stats = useMemo(() => computeProgress(workouts), [workouts]);
+export default function ProgressView({ workouts, masters }: Props) {
+  const stats = useMemo(() => computeProgress(workouts, masters), [workouts, masters]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 md:px-12 md:py-14">

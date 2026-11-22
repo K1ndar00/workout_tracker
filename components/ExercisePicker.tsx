@@ -1,46 +1,46 @@
 'use client';
 
 import { forwardRef, useState } from 'react';
-import { ExerciseMaster, PartId } from '@/shared/types';
-import { PARTS, SELECTABLE_PARTS } from '@/shared/exercises';
+import { ExerciseMaster, PartId } from '@/lib/types';
+import { PARTS, SELECTABLE_PARTS } from '@/lib/exercises';
 
 const NEW_VALUE = '__new__';
 
 interface Props {
   exerciseId?: string;
-  /** Name saved with the record; shown only when the master entry cannot be found. */
-  name: string;
   /** Defaults + user-added entries. */
   masters: ExerciseMaster[];
   onSelect: (master: ExerciseMaster) => void;
   /** Returns the existing entry when the name is already taken, otherwise a new one. */
-  onCreate: (name: string, part: PartId) => ExerciseMaster;
+  onCreate: (name: string, part: PartId) => Promise<ExerciseMaster>;
   selectClassName?: string;
 }
 
 /** Dropdown of the exercise master (grouped by body part) with an inline "add new" form. */
 const ExercisePicker = forwardRef<HTMLSelectElement, Props>(function ExercisePicker(
-  { exerciseId, name, masters, onSelect, onCreate, selectClassName },
+  { exerciseId, masters, onSelect, onCreate, selectClassName },
   ref
 ) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPart, setNewPart] = useState<PartId>('chest');
 
-  const known = masters.some((m) => m.id === exerciseId);
-
-  function submit() {
+  async function submit() {
     if (!newName.trim()) return;
-    onSelect(onCreate(newName, newPart));
-    setNewName('');
-    setAdding(false);
+    try {
+      onSelect(await onCreate(newName, newPart));
+      setNewName('');
+      setAdding(false);
+    } catch {
+      // the error is shown by the page (notice); keep the form open
+    }
   }
 
   return (
     <div className="flex-1 min-w-0">
       <select
         ref={ref}
-        value={known ? exerciseId : exerciseId ?? ''}
+        value={exerciseId ?? ''}
         onChange={(e) => {
           if (e.target.value === NEW_VALUE) {
             setAdding(true);
@@ -55,7 +55,6 @@ const ExercisePicker = forwardRef<HTMLSelectElement, Props>(function ExercisePic
         }
       >
         {!exerciseId && <option value="">種目を選択...</option>}
-        {exerciseId && !known && <option value={exerciseId}>{name}</option>}
         {PARTS.map((p) => {
           const items = masters.filter((m) => m.part === p.id);
           if (items.length === 0) return null;
@@ -78,7 +77,7 @@ const ExercisePicker = forwardRef<HTMLSelectElement, Props>(function ExercisePic
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            onKeyDown={(e) => e.key === 'Enter' && void submit()}
             placeholder="種目名"
             className="flex-1 min-w-[8rem] text-sm bg-white border border-gray-200 rounded px-2 py-1 outline-none"
           />
@@ -94,7 +93,7 @@ const ExercisePicker = forwardRef<HTMLSelectElement, Props>(function ExercisePic
             ))}
           </select>
           <button
-            onClick={submit}
+            onClick={() => void submit()}
             disabled={!newName.trim()}
             className="text-sm px-3 py-1 rounded bg-gray-900 text-white disabled:opacity-40"
           >
