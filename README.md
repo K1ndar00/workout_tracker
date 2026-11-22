@@ -27,7 +27,8 @@
 
 1. [Supabase](https://supabase.com) でプロジェクトを作成します。
 2. SQL Editor で `supabase/migrations/0002_normalized_schema.sql` を実行します(テーブル・RLS・初期種目・保存関数・ビュー)。
-   - **旧バージョン(`documents` テーブル)のデータがある場合のみ**、先に `0001_init.sql` を実行済みであること、そのあと `0003_migrate_documents.sql` を実行して移行します。新規の場合は `0002` だけで足ります。
+   - **旧バージョン(`documents` テーブル)のデータがある場合のみ**、`0001_init.sql` を実行済みであることを確認し、続けて `0003_migrate_documents.sql` を実行して移行します。
+   - 最後に `0004_progress_views.sql`(進捗画面用の集計ビュー)を実行します。新規の場合は `0002` → `0004` の順で、`0003` は不要です。
 3. Project Settings → API の **Project URL** と **anon public key** を控えます。
 4. (開発中に便利)Authentication → Providers → Email で「Confirm email」をオフにすると、確認メールなしで登録できます。
 

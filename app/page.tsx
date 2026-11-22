@@ -169,7 +169,7 @@ function WorkoutApp({ onSignOut }: { onSignOut: () => void }) {
               onDelete={handleDeleteMaster}
             />
           )}
-          {view === 'progress' && <ProgressView workouts={workouts} masters={exercises} />}
+          {view === 'progress' && <ProgressView workouts={workouts} saveStatus={data.saveStatus} />}
         </div>
       </main>
     </div>

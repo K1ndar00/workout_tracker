@@ -1,6 +1,6 @@
 # データベース設計
 
-状態: `supabase/migrations/0002_normalized_schema.sql` の内容(ローカルの PostgreSQL で検証済み)。経緯は `06_redesign-adr.md`。
+状態: `supabase/migrations/0002_normalized_schema.sql` と `0004_progress_views.sql` の内容(ローカルの PostgreSQL で検証済み)。経緯は `06_redesign-adr.md`。
 
 ## 1. ER 図
 
@@ -41,7 +41,13 @@ auth.users
 
 - `save_workout(p jsonb)`: ワークアウト 1 件(種目・セット込み)を 1 トランザクションで保存。JSON に含まれない種目・セットは削除する。呼び出し側の権限で動く(`security invoker`)ため RLS が効く。
 - `save_plan(p jsonb)`: 計画(日・種目込み)について同様。
-- `v_set_facts`(ビュー): セットごとに 日付・部位・種目・重量・回数・ボリューム を持つ平らな表。進捗画面と Python 分析で使う予定。RLS が効く(`security_invoker`)。
+- `v_set_facts`(ビュー): セットごとに 日付・部位・種目・重量・回数・ボリューム(kg 換算を含む)を持つ平らな表。Python 分析でも使える。
+- 進捗用の集計ビュー(`0004_progress_views.sql`)。いずれも「完了」のセットだけを集計し、lbs は kg に換算する。
+  - `v_part_weekly`: 部位 × 週(月曜始まり)のセット数・ボリューム・ワークアウト数
+  - `v_exercise_daily`: 種目 × 日のセット数・回数・ボリューム・最大重量
+  - `v_exercise_summary`: 種目ごとの実施日数・合計ボリューム・最大重量・最終日
+  - すべて RLS が効く(`security_invoker`)。
+- なぜビューで集計するか: Supabase の API は 1 回の取得が最大 1,000 行までのため、セットを全部取ってクライアントで集計すると、データが増えたときに黙って切り捨てられる。集計済みの行(部位数 × 週数、種目数)だけを取得する。
 
 ## 5. 旧データの移行(`0003_migrate_documents.sql`)
 
