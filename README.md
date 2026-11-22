@@ -1,13 +1,11 @@
 # Workout Tracker
 
-筋トレ記録・トレーニング計画・進捗をまとめたアプリです。**Web 版**(Next.js)と**モバイル版**(Expo / React Native)の
-どちらからでも同じデータを操作でき、Supabase を介して同期されます。
+筋トレ記録・トレーニング計画・進捗をまとめたアプリです。**Web 版**(Next.js)のアプリです。スマホもブラウザから使えます。データは Supabase に保存します。
 
 ```
 .
 ├── app/ components/ lib/   Web 版 (Next.js)
-├── mobile/                 モバイル版 (Expo / React Native)
-├── shared/                 Web・モバイル共通コード(型・ユーティリティ・同期エンジン・データ用フック)
+├── shared/                 型・ユーティリティ・同期エンジン・データ用フック
 └── supabase/migrations/    データベース定義
 ```
 
@@ -36,18 +34,6 @@ cp .env.example .env.local   # URL と anon key を記入
 npm install
 npm run dev
 ```
-
-### 3. モバイル版
-
-```bash
-cd mobile
-cp .env.example .env         # Web 版と同じ URL / anon key を記入
-npm install
-npx expo start               # Expo Go で QR を読み取る、または a / i でエミュレータを起動
-```
-
-ストア配布用のビルドは [EAS Build](https://docs.expo.dev/build/introduction/) を使います
-(`app.json` に `ios.bundleIdentifier` / `android.package` を設定してください)。
 
 ## 既知の制限
 
