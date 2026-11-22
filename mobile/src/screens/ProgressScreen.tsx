@@ -1,19 +1,16 @@
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import type { DailyNutrition, NutritionSettings, Workout } from '../../../shared/types';
+import type { Workout } from '../../../shared/types';
 import { computeProgress } from '../../../shared/stats';
-import { isToday } from '../../../shared/utils';
 import { Bar, Card, Screen } from '../ui';
 import { c } from '../theme';
 
 interface Props {
   workouts: Workout[];
-  logs: DailyNutrition[];
-  settings: NutritionSettings;
 }
 
-export default function ProgressScreen({ workouts, logs, settings }: Props) {
-  const stats = useMemo(() => computeProgress(workouts, logs, settings), [workouts, logs, settings]);
+export default function ProgressScreen({ workouts }: Props) {
+  const stats = useMemo(() => computeProgress(workouts), [workouts]);
 
   return (
     <Screen title="進捗">
@@ -57,7 +54,7 @@ export default function ProgressScreen({ workouts, logs, settings }: Props) {
       {stats.prs.length > 0 && (
         <>
           <Text style={h2}>種目別最大重量</Text>
-          <Card style={{ marginBottom: 26 }}>
+          <Card>
             {stats.prs.map(([name, weight], i) => (
               <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: c.borderSoft }}>
                 <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: c.text }} numberOfLines={1}>{name}</Text>
@@ -70,25 +67,6 @@ export default function ProgressScreen({ workouts, logs, settings }: Props) {
           </Card>
         </>
       )}
-
-      <Text style={h2}>カロリー推移(過去7日)</Text>
-      <Card>
-        {stats.calTrend.map((d, i) => {
-          const over = d.kcal > settings.targetCalories && d.kcal > 0;
-          return (
-            <View key={d.date} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: c.borderSoft, backgroundColor: isToday(d.date) ? '#eff6ff' : c.bg }}>
-              <Text style={{ width: 26, fontSize: 12, color: c.muted2 }}>{d.label}</Text>
-              <View style={{ flex: 1 }}>
-                <Bar pct={d.kcal > 0 ? (d.kcal / Math.max(stats.maxKcal, 1)) * 100 : 0} color={over ? '#f87171' : c.green} />
-              </View>
-              <Text style={{ width: 84, textAlign: 'right', fontSize: 12, fontWeight: '500', color: d.kcal === 0 ? '#d1d5db' : over ? c.red : c.text2 }}>
-                {d.kcal === 0 ? '未記録' : `${d.kcal.toLocaleString()} kcal`}
-              </Text>
-            </View>
-          );
-        })}
-      </Card>
-      <Text style={{ fontSize: 11, color: c.muted, textAlign: 'right', marginTop: 6 }}>目標: {settings.targetCalories.toLocaleString()} kcal</Text>
     </Screen>
   );
 }

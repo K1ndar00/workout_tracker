@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { AppData, DEFAULT_SETTINGS, EMPTY_DATA, KeyValueStorage, SyncEngine } from './sync';
-import type { DailyNutrition, NutritionSettings, TrainingPlan, Workout } from './types';
+import { AppData, EMPTY_DATA, KeyValueStorage, SyncEngine } from './sync';
+import type { TrainingPlan, Workout } from './types';
 
 /** local = no backend configured; the rest describe the Supabase sync. */
 export type SyncStatus = 'local' | 'syncing' | 'synced' | 'error';
@@ -24,8 +24,6 @@ function parseData(raw: string | null): AppData {
     return {
       workouts: p.workouts ?? [],
       plans: p.plans ?? [],
-      nutrition: p.nutrition ?? [],
-      settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) },
     };
   } catch {
     return EMPTY_DATA;
@@ -191,8 +189,6 @@ export function useAppData({ client, userId, storage }: Options) {
     return {
       setWorkouts: make('workouts') as Dispatch<SetStateAction<Workout[]>>,
       setPlans: make('plans') as Dispatch<SetStateAction<TrainingPlan[]>>,
-      setNutrition: make('nutrition') as Dispatch<SetStateAction<DailyNutrition[]>>,
-      setSettings: make('settings') as Dispatch<SetStateAction<NutritionSettings>>,
     };
   }, [commit]);
 
@@ -204,8 +200,6 @@ export function useAppData({ client, userId, storage }: Options) {
     sync,
     workouts: d.workouts,
     plans: d.plans,
-    nutrition: d.nutrition,
-    settings: d.settings,
     ...setters,
   };
 }

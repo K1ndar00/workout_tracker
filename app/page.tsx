@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
+import { AppView, TrainingPlan, Workout } from '@/shared/types';
 import { useAppData } from '@/shared/useAppData';
-import { createNutritionDay, createPlan, createWorkout, today } from '@/shared/utils';
+import { createPlan, createWorkout } from '@/shared/utils';
 import { supabase } from '@/lib/supabase';
 import { webStorage } from '@/lib/storage';
 import AuthGate from '@/components/AuthGate';
@@ -11,7 +11,6 @@ import Sidebar from '@/components/Sidebar';
 import WorkoutDetail from '@/components/WorkoutDetail';
 import EmptyState from '@/components/EmptyState';
 import PlansView from '@/components/PlansView';
-import NutritionView from '@/components/NutritionView';
 import ProgressView from '@/components/ProgressView';
 import { Menu, Plus } from 'lucide-react';
 
@@ -33,17 +32,12 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
     setWorkouts,
     plans,
     setPlans,
-    nutrition: nutritionLogs,
-    setNutrition: setNutritionLogs,
-    settings: nutritionSettings,
-    setSettings: setNutritionSettings,
   } = useAppData({ client: supabase, userId, storage: webStorage });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<AppView>('workouts');
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(today());
 
   // Pick the first item once the data has loaded, and again if the selection disappears
   // (e.g. it was deleted on another device).
@@ -103,41 +97,14 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
     });
   }, []);
 
-  // Nutrition handlers
-  const getOrCreateLog = useCallback(
-    (date: string): DailyNutrition => {
-      const existing = nutritionLogs.find((n) => n.date === date);
-      if (existing) return existing;
-      const newLog = createNutritionDay(date);
-      setNutritionLogs((prev) => [newLog, ...prev]);
-      return newLog;
-    },
-    [nutritionLogs]
-  );
-
-  const handleNutritionChange = useCallback((log: DailyNutrition) => {
-    setNutritionLogs((prev) => {
-      // One log per date: that date is also the key it syncs under.
-      const exists = prev.some((n) => n.date === log.date);
-      return exists ? prev.map((n) => (n.date === log.date ? log : n)) : [log, ...prev];
-    });
-  }, []);
-
-  const handleDateChange = useCallback((date: string) => {
-    setSelectedDate(date);
-  }, []);
-
   const selectedWorkout = workouts.find((w) => w.id === selectedWorkoutId) ?? null;
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null;
-  const currentLog = nutritionLogs.find((n) => n.date === selectedDate) ?? createNutritionDay(selectedDate);
 
   const mobileTitle =
     view === 'workouts'
       ? selectedWorkout ? `${selectedWorkout.emoji} ${selectedWorkout.title}` : 'ワークアウト記録'
       : view === 'plans'
       ? selectedPlan ? `${selectedPlan.emoji} ${selectedPlan.name}` : 'トレーニング計画'
-      : view === 'nutrition'
-      ? '栄養管理'
       : '進捗';
 
   const showMobileNew = view === 'workouts' || view === 'plans';
@@ -165,9 +132,6 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
         onSelectPlan={(id) => { setSelectedPlanId(id); setSidebarOpen(false); }}
         onNewPlan={handleNewPlan}
         onDeletePlan={handleDeletePlan}
-        nutritionLogs={nutritionLogs}
-        selectedDate={selectedDate}
-        onSelectDate={(date) => { setSelectedDate(date); setSidebarOpen(false); }}
         syncStatus={syncStatus}
         syncError={syncError}
         signedIn={userId !== null}
@@ -208,21 +172,8 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
                   </button>
                 </div>
           )}
-          {view === 'nutrition' && (
-            <NutritionView
-              log={currentLog}
-              settings={nutritionSettings}
-              onLogChange={handleNutritionChange}
-              onSettingsChange={setNutritionSettings}
-              onDateChange={handleDateChange}
-            />
-          )}
           {view === 'progress' && (
-            <ProgressView
-              workouts={workouts}
-              nutritionLogs={nutritionLogs}
-              settings={nutritionSettings}
-            />
+            <ProgressView workouts={workouts} />
           )}
         </div>
       </main>

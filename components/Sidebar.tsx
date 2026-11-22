@@ -1,15 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
-import { formatDate, formatDayLabel, formatMonthKey, today } from '@/shared/utils';
-import { BarChart2, ClipboardList, Dumbbell, LogOut, Plus, Trash2, TrendingUp, UtensilsCrossed, X } from 'lucide-react';
+import { AppView, TrainingPlan, Workout } from '@/shared/types';
+import { formatDate, formatMonthKey } from '@/shared/utils';
+import { BarChart2, ClipboardList, Dumbbell, LogOut, Plus, Trash2, TrendingUp, X } from 'lucide-react';
 import type { SyncStatus } from '@/shared/useAppData';
 
 const NAV: { id: AppView; label: string; Icon: React.ElementType }[] = [
   { id: 'workouts', label: '記録', Icon: Dumbbell },
   { id: 'plans', label: '計画', Icon: ClipboardList },
-  { id: 'nutrition', label: '栄養', Icon: UtensilsCrossed },
   { id: 'progress', label: '進捗', Icon: TrendingUp },
 ];
 
@@ -30,10 +29,6 @@ interface SidebarProps {
   onSelectPlan: (id: string) => void;
   onNewPlan: () => void;
   onDeletePlan: (id: string) => void;
-  // nutrition
-  nutritionLogs: DailyNutrition[];
-  selectedDate: string;
-  onSelectDate: (date: string) => void;
   // account / sync
   syncStatus: SyncStatus;
   syncError: string | null;
@@ -58,19 +53,10 @@ function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
   return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
 }
 
-function last14Days(): string[] {
-  return Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toISOString().slice(0, 10);
-  });
-}
-
 export default function Sidebar(props: SidebarProps) {
   const { view, onViewChange, isOpen, onClose } = props;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const grouped = useMemo(() => groupByMonth(props.workouts), [props.workouts]);
-  const dates = useMemo(() => last14Days(), []);
 
   return (
     <aside
@@ -188,32 +174,6 @@ export default function Sidebar(props: SidebarProps) {
                 </button>
               </div>
             ))}
-          </>
-        )}
-
-        {/* Nutrition date list */}
-        {view === 'nutrition' && (
-          <>
-            {dates.map((date) => {
-              const log = props.nutritionLogs.find((n) => n.date === date);
-              const kcal = log?.meals.flatMap((m) => m.foods).reduce((a, f) => a + f.calories, 0) ?? 0;
-              return (
-                <div
-                  key={date}
-                  onClick={() => { props.onSelectDate(date); onClose(); }}
-                  className={`flex items-center justify-between px-2 py-2 rounded-md cursor-pointer mb-0.5 ${
-                    props.selectedDate === date
-                      ? 'bg-gray-200/80 text-gray-900'
-                      : 'text-gray-700 hover:bg-gray-200/50 active:bg-gray-200'
-                  }`}
-                >
-                  <span className="text-[13px] font-medium">{formatDayLabel(date)}</span>
-                  {kcal > 0 && (
-                    <span className="text-[11px] text-gray-400">{kcal.toLocaleString()}kcal</span>
-                  )}
-                </div>
-              );
-            })}
           </>
         )}
 

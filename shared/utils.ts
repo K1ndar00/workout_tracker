@@ -1,8 +1,5 @@
 import {
-  DailyNutrition,
   Exercise,
-  FoodItem,
-  NutritionMeal,
   PlanDay,
   PlanExercise,
   TrainingPlan,
@@ -59,22 +56,6 @@ export function createPlan(): TrainingPlan {
     days: [createPlanDay(1), createPlanDay(2), createPlanDay(3)],
     isActive: false,
     createdAt: new Date().toISOString(),
-  };
-}
-
-export function createFoodItem(): FoodItem {
-  return { id: uid(), name: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0 };
-}
-
-export function createMeal(name: string): NutritionMeal {
-  return { id: uid(), name, foods: [] };
-}
-
-export function createNutritionDay(date: string): DailyNutrition {
-  return {
-    id: uid(),
-    date,
-    meals: [createMeal('朝食'), createMeal('昼食'), createMeal('夕食')],
   };
 }
 

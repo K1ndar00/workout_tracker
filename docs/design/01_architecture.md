@@ -40,13 +40,13 @@
 
 | 場所 | 役割 |
 | --- | --- |
-| `app/page.tsx` | Web のメイン画面。4 つのビュー(`workouts` / `plans` / `nutrition` / `progress`)を切り替える |
-| `components/` | Web の UI 部品(`AuthGate`, `Sidebar`, `WorkoutDetail`, `PlansView`, `NutritionView`, `ProgressView` など) |
+| `app/page.tsx` | Web のメイン画面。3 つのビュー(`workouts` / `plans` / `progress`)を切り替える |
+| `components/` | Web の UI 部品(`AuthGate`, `Sidebar`, `WorkoutDetail`, `PlansView`, `ProgressView` など) |
 | `lib/supabase.ts` | Web 用の Supabase クライアント生成。環境変数が未設定なら `null`(ローカルモード) |
 | `lib/storage.ts` | Web 用ストレージ(`localStorage`)。同期導入前のデータを最初のアカウントに引き継ぐ処理を含む |
-| `mobile/App.tsx`, `mobile/src/screens/` | モバイルの画面。Web と同じ 4 機能 + 認証・アカウント画面 |
+| `mobile/App.tsx`, `mobile/src/screens/` | モバイルの画面。Web と同じ 3 機能 + 認証・アカウント画面 |
 | `mobile/src/storage.ts`, `supabase.ts` | モバイル用ストレージ(AsyncStorage)と Supabase クライアント |
-| `shared/types.ts` | データ型(Workout, TrainingPlan, DailyNutrition など)。Web・モバイル共通の定義元 |
+| `shared/types.ts` | データ型(Workout, TrainingPlan など)。Web・モバイル共通の定義元 |
 | `shared/useAppData.ts` | **データの唯一の管理場所**となる React フック。ローカルキャッシュ・同期・リアルタイム購読をまとめる |
 | `shared/sync.ts` | `SyncEngine`(pull / push)と、3 点比較のマージ関数 `reconcile` |
 | `shared/stats.ts`, `utils.ts` | 進捗の集計・日付などのユーティリティ |
@@ -106,7 +106,6 @@
 
 事実(README・コードより):
 
-- 栄養ログは日付ごとに 1 件(同期のキーが日付のため)。
 - 日付は UTC 基準(`toISOString()`)で、日本時間の 0〜9 時台は「前日」扱いになることがある。
 - 同じ項目を複数端末で同時にオフライン編集すると、後から同期した側が残る(もう一方の編集は失われる)。
 - `pull` は毎回そのユーザーの**全ドキュメント**を取得する(差分取得ではない)。

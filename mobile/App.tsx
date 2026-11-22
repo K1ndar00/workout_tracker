@@ -11,16 +11,14 @@ import { Icon, IconName } from './src/ui';
 import AuthScreen from './src/screens/AuthScreen';
 import WorkoutsScreen from './src/screens/WorkoutsScreen';
 import PlansScreen from './src/screens/PlansScreen';
-import NutritionScreen from './src/screens/NutritionScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import AccountScreen from './src/screens/AccountScreen';
 
-type Tab = 'workouts' | 'plans' | 'nutrition' | 'progress' | 'account';
+type Tab = 'workouts' | 'plans' | 'progress' | 'account';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'workouts', label: '記録', icon: 'barbell-outline' },
   { id: 'plans', label: '計画', icon: 'clipboard-outline' },
-  { id: 'nutrition', label: '栄養', icon: 'restaurant-outline' },
   { id: 'progress', label: '進捗', icon: 'trending-up-outline' },
   { id: 'account', label: '設定', icon: 'person-circle-outline' },
 ];
@@ -88,10 +86,7 @@ function Main({ userId, email }: { userId: string | null; email: string | null }
       <View style={{ flex: 1 }}>
         {tab === 'workouts' && <WorkoutsScreen workouts={d.workouts} setWorkouts={d.setWorkouts} />}
         {tab === 'plans' && <PlansScreen plans={d.plans} setPlans={d.setPlans} />}
-        {tab === 'nutrition' && (
-          <NutritionScreen logs={d.nutrition} setLogs={d.setNutrition} settings={d.settings} setSettings={d.setSettings} />
-        )}
-        {tab === 'progress' && <ProgressScreen workouts={d.workouts} logs={d.nutrition} settings={d.settings} />}
+        {tab === 'progress' && <ProgressScreen workouts={d.workouts} />}
         {tab === 'account' && (
           <AccountScreen
             email={email}

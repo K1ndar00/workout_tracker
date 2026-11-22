@@ -5,7 +5,7 @@
 ## 1. 方針(事実)
 
 - テーブルは `public.documents` の **1 枚のみ**。
-- ワークアウト・計画・栄養ログ・設定を、すべて `collection` 列で区別して JSON(`jsonb`)で保存する。
+- ワークアウト・計画を、すべて `collection` 列で区別して JSON(`jsonb`)で保存する。
 - 1 行 = 1 ドキュメント = 1 ユーザーのデータ 1 件。
 
 ## 2. ER 図
@@ -25,7 +25,7 @@ documents
 | カラム | 型 | NULL | デフォルト | 説明 |
 | --- | --- | --- | --- | --- |
 | `user_id` | uuid | 不可 | `auth.uid()` | 所有者。`auth.users(id)` への外部キー(`on delete cascade`) |
-| `collection` | text | 不可 | - | 種類。`workouts` / `plans` / `nutrition` / `settings` のみ(CHECK 制約) |
+| `collection` | text | 不可 | - | 種類。`workouts` / `plans` のみ(CHECK 制約。0002 適用後) |
 | `key` | text | 不可 | - | ドキュメント ID(下表) |
 | `data` | jsonb | 不可 | - | ドキュメント本体 |
 | `updated_at` | timestamptz | 不可 | `now()` | 更新日時。更新時にトリガーで自動更新 |
@@ -33,16 +33,15 @@ documents
 - **主キー**: `(user_id, collection, key)`
 - **インデックス**: 主キーのみ(`user_id` で始まるため、ユーザー単位の取得に効く。※効くかどうかは推測であり、実測はしていない)
 
+> 注: 0001 では `nutrition` / `settings` も許可していた。栄養管理の削除に伴い、`0002_remove_nutrition.sql` でそれらの行の削除と CHECK 制約の変更を行う(**開発者が手動実行。未実行の間は旧データが残る**)。
+
 ### `key` の中身
 
 | collection | key | `data` の型(`shared/types.ts`) |
 | --- | --- | --- |
 | `workouts` | ワークアウトの `id` | `Workout`(タイトル・日付・種目・セット・メモなど) |
 | `plans` | 計画の `id` | `TrainingPlan`(名前・曜日ごとの種目・有効フラグなど) |
-| `nutrition` | **日付**(`date`) | `DailyNutrition`(食事・食品・栄養素) |
-| `settings` | 固定値 `'settings'` | `NutritionSettings`(目標カロリー・P/F/C) |
 
-`nutrition` のキーが日付なので、**1 日 1 件**に制限される(README の既知の制限と一致)。
 
 ## 4. セキュリティ(RLS)
 
@@ -69,7 +68,6 @@ Row Level Security は有効。ポリシーは 4 つで、すべて「自分の�
 
 - `data` の中身(JSON の形)は **DB では検証されない**。型の保証はクライアント側の TypeScript だけ。
 - `updated_at` はあるが、競合判定には**使われていない**(同期は JSON 文字列の比較による。`shared/sync.ts`)。
-- `settings` を削除する UI はなく、`push` でも settings の削除は送らない。
 
 推測:
 

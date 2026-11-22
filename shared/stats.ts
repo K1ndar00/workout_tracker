@@ -1,4 +1,4 @@
-import type { DailyNutrition, NutritionSettings, Workout } from './types';
+import type { Workout } from './types';
 
 function weekLabel(date: Date): string {
   return new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric' }).format(date);
@@ -13,16 +13,8 @@ function getMondayOf(date: Date): Date {
   return d;
 }
 
-export function dayKcal(log: DailyNutrition | undefined): number {
-  return log?.meals.flatMap((m) => m.foods).reduce((a, f) => a + f.calories, 0) ?? 0;
-}
-
 /** Numbers behind the progress screen; shared so web and mobile always agree. */
-export function computeProgress(
-  workouts: Workout[],
-  nutritionLogs: DailyNutrition[],
-  settings: NutritionSettings
-) {
+export function computeProgress(workouts: Workout[]) {
   // Weekly workout counts (last 8 weeks)
   const now = new Date();
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -66,17 +58,7 @@ export function computeProgress(
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  // Calorie trend last 7 days
-  const calTrend = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().slice(0, 10);
-    const kcal = dayKcal(nutritionLogs.find((n) => n.date === dateStr));
-    return { date: dateStr, kcal, label: new Intl.DateTimeFormat('ja-JP', { weekday: 'short' }).format(d) };
-  });
-
   const maxWeekCount = Math.max(...weekCounts.map((w) => w.count), 1);
-  const maxKcal = Math.max(...calTrend.map((d) => d.kcal), settings.targetCalories);
 
-  return { weekCounts, thisWeekCount, thisMonthCount, exerciseCount, prs, calTrend, maxWeekCount, maxKcal };
+  return { weekCounts, thisWeekCount, thisMonthCount, exerciseCount, prs, maxWeekCount };
 }
