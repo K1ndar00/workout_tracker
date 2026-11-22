@@ -1,7 +1,8 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppData, EMPTY_DATA, KeyValueStorage, SyncEngine } from './sync';
-import type { TrainingPlan, Workout } from './types';
+import type { ExerciseMaster, TrainingPlan, Workout } from './types';
+import { linkExercises } from './exercises';
 
 /** local = no backend configured; the rest describe the Supabase sync. */
 export type SyncStatus = 'local' | 'syncing' | 'synced' | 'error';
@@ -24,6 +25,7 @@ function parseData(raw: string | null): AppData {
     return {
       workouts: p.workouts ?? [],
       plans: p.plans ?? [],
+      exercises: p.exercises ?? [],
     };
   } catch {
     return EMPTY_DATA;
@@ -149,6 +151,16 @@ export function useAppData({ client, userId, storage }: Options) {
     if (pulledRef.current) schedulePush(PUSH_DELAY_MS);
   });
 
+  // Link free-text exercise names to the master (idempotent). With an account, wait until the
+  // first pull has merged the server state, so entries made on other devices are seen first.
+  useEffect(() => {
+    if (readyScope !== scope) return;
+    if (client && status !== 'synced') return;
+    const cur = dataRef.current;
+    const linked = linkExercises(cur.workouts, cur.plans, cur.exercises);
+    if (linked) commit({ ...cur, ...linked });
+  }, [readyScope, scope, client, status, commit]);
+
   // Other devices' changes arrive as realtime events; re-pull (debounced).
   useEffect(() => {
     if (!client || !userId || readyScope !== scope) return;
@@ -189,6 +201,7 @@ export function useAppData({ client, userId, storage }: Options) {
     return {
       setWorkouts: make('workouts') as Dispatch<SetStateAction<Workout[]>>,
       setPlans: make('plans') as Dispatch<SetStateAction<TrainingPlan[]>>,
+      setExercises: make('exercises') as Dispatch<SetStateAction<ExerciseMaster[]>>,
     };
   }, [commit]);
 
@@ -200,6 +213,7 @@ export function useAppData({ client, userId, storage }: Options) {
     sync,
     workouts: d.workouts,
     plans: d.plans,
+    exercises: d.exercises,
     ...setters,
   };
 }
