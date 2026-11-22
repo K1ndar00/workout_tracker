@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import type { Exercise, Workout, WorkoutSet } from '../../../shared/types';
+import type { Exercise, ExerciseMaster, PartId, Workout, WorkoutSet } from '../../../shared/types';
+import ExercisePicker from '../ExercisePicker';
 import { addDays, createExercise, createSet, createWorkout, formatDate, formatMonthKey } from '../../../shared/utils';
 import { Button, Card, confirmDelete, EmojiPicker, EmptyHint, Field, Icon, IconButton, NumField, Pill, Screen } from '../ui';
 import { c } from '../theme';
@@ -10,9 +11,11 @@ const EMOJIS = ['🏋️', '💪', '🤸', '🏃', '🚴', '🧘', '⚽', '🏊'
 interface Props {
   workouts: Workout[];
   setWorkouts: React.Dispatch<React.SetStateAction<Workout[]>>;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }
 
-export default function WorkoutsScreen({ workouts, setWorkouts }: Props) {
+export default function WorkoutsScreen({ workouts, setWorkouts, masters, onCreateMaster }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = workouts.find((w) => w.id === selectedId) ?? null;
 
@@ -35,6 +38,8 @@ export default function WorkoutsScreen({ workouts, setWorkouts }: Props) {
     return (
       <WorkoutDetail
         workout={selected}
+        masters={masters}
+        onCreateMaster={onCreateMaster}
         onBack={() => setSelectedId(null)}
         onChange={(updated) => setWorkouts((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))}
         onDelete={() =>
@@ -94,11 +99,15 @@ function WorkoutDetail({
   onChange,
   onBack,
   onDelete,
+  masters,
+  onCreateMaster,
 }: {
   workout: Workout;
   onChange: (w: Workout) => void;
   onBack: () => void;
   onDelete: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }) {
   const update = (partial: Partial<Workout>) => onChange({ ...workout, ...partial });
   const totalSets = workout.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -144,6 +153,8 @@ function WorkoutDetail({
           exercise={ex}
           onChange={(updated) => update({ exercises: workout.exercises.map((e) => (e.id === updated.id ? updated : e)) })}
           onDelete={() => update({ exercises: workout.exercises.filter((e) => e.id !== ex.id) })}
+          masters={masters}
+          onCreateMaster={onCreateMaster}
         />
       ))}
       <Button
@@ -169,10 +180,14 @@ function ExerciseBlock({
   exercise,
   onChange,
   onDelete,
+  masters,
+  onCreateMaster,
 }: {
   exercise: Exercise;
   onChange: (e: Exercise) => void;
   onDelete: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }) {
   const updateSet = (u: WorkoutSet) => onChange({ ...exercise, sets: exercise.sets.map((x) => (x.id === u.id ? u : x)) });
   const addSet = () => {
@@ -185,12 +200,12 @@ function ExerciseBlock({
   return (
     <View style={{ marginBottom: 22 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <TextInput
-          value={exercise.name}
-          onChangeText={(name) => onChange({ ...exercise, name })}
-          placeholder="エクササイズ名を入力..."
-          placeholderTextColor={c.muted}
-          style={{ flex: 1, fontSize: 17, fontWeight: '600', color: c.text }}
+        <ExercisePicker
+          exerciseId={exercise.exerciseId}
+          name={exercise.name}
+          masters={masters}
+          onSelect={(m) => onChange({ ...exercise, exerciseId: m.id, name: m.name })}
+          onCreate={onCreateMaster}
         />
         {done.length > 0 && (
           <Text style={{ fontSize: 11, color: c.muted, marginRight: 4 }}>

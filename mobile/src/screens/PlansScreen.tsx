@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import type { PlanDay, PlanExercise, TrainingPlan } from '../../../shared/types';
+import type { ExerciseMaster, PartId, PlanDay, PlanExercise, TrainingPlan } from '../../../shared/types';
+import ExercisePicker from '../ExercisePicker';
 import { createPlan, createPlanDay, createPlanExercise } from '../../../shared/utils';
 import { Button, Card, confirmDelete, EmojiPicker, EmptyHint, Field, Icon, IconButton, NumField, Screen } from '../ui';
 import { c } from '../theme';
@@ -10,9 +11,11 @@ const EMOJIS = ['🗓️', '💪', '🏋️', '🤸', '🏃', '🚴', '🔥', '�
 interface Props {
   plans: TrainingPlan[];
   setPlans: React.Dispatch<React.SetStateAction<TrainingPlan[]>>;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }
 
-export default function PlansScreen({ plans, setPlans }: Props) {
+export default function PlansScreen({ plans, setPlans, masters, onCreateMaster }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = plans.find((p) => p.id === selectedId) ?? null;
 
@@ -26,6 +29,8 @@ export default function PlansScreen({ plans, setPlans }: Props) {
     return (
       <PlanDetail
         plan={selected}
+        masters={masters}
+        onCreateMaster={onCreateMaster}
         onBack={() => setSelectedId(null)}
         onChange={(u) => setPlans((prev) => prev.map((p) => (p.id === u.id ? u : p)))}
         onDelete={() =>
@@ -81,11 +86,15 @@ function PlanDetail({
   onChange,
   onBack,
   onDelete,
+  masters,
+  onCreateMaster,
 }: {
   plan: TrainingPlan;
   onChange: (p: TrainingPlan) => void;
   onBack: () => void;
   onDelete: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }) {
   const update = (partial: Partial<TrainingPlan>) => onChange({ ...plan, ...partial });
   const [closed, setClosed] = useState<Set<string>>(new Set());
@@ -151,6 +160,8 @@ function PlanDetail({
           day={day}
           open={!closed.has(day.id)}
           onToggle={() => toggle(day.id)}
+          masters={masters}
+          onCreateMaster={onCreateMaster}
           onChange={(u) => update({ days: plan.days.map((d) => (d.id === u.id ? u : d)) })}
           onDelete={plan.days.length > 1 ? () => confirmDelete('デイ', () => update({ days: plan.days.filter((d) => d.id !== day.id) })) : undefined}
         />
@@ -166,12 +177,16 @@ function DaySection({
   onToggle,
   onChange,
   onDelete,
+  masters,
+  onCreateMaster,
 }: {
   day: PlanDay;
   open: boolean;
   onToggle: () => void;
   onChange: (d: PlanDay) => void;
   onDelete?: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => ExerciseMaster;
 }) {
   const updateEx = (ex: PlanExercise) => onChange({ ...day, exercises: day.exercises.map((e) => (e.id === ex.id ? ex : e)) });
   return (
@@ -194,12 +209,13 @@ function DaySection({
               key={ex.id}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderTopWidth: 1, borderTopColor: c.borderSoft }}
             >
-              <TextInput
-                value={ex.name}
-                onChangeText={(name) => updateEx({ ...ex, name })}
-                placeholder="種目名"
-                placeholderTextColor={c.muted}
-                style={{ flex: 1, fontSize: 14, color: c.text2, paddingVertical: 6 }}
+              <ExercisePicker
+                exerciseId={ex.exerciseId}
+                name={ex.name}
+                masters={masters}
+                onSelect={(m) => updateEx({ ...ex, exerciseId: m.id, name: m.name })}
+                onCreate={onCreateMaster}
+                fontSize={14}
               />
               <NumField value={ex.sets} onChange={(sets) => updateEx({ ...ex, sets: sets || 1 })} style={{ width: 44, paddingVertical: 4 }} />
               <Text style={{ color: c.muted2 }}>×</Text>
