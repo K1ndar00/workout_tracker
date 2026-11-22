@@ -23,6 +23,7 @@ function claimLegacyData(): string | null {
   const data: AppData = {
     workouts: readJson(LEGACY.workouts, []),
     plans: readJson(LEGACY.plans, []),
+    exercises: [],
   };
   const empty = !data.workouts.length && !data.plans.length;
   if (empty) return null;

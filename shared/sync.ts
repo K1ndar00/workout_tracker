@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { TrainingPlan, Workout } from './types';
+import type { ExerciseMaster, TrainingPlan, Workout } from './types';
 
 /** Everything the app stores. Both the web and mobile clients keep exactly this shape. */
 export interface AppData {
   workouts: Workout[];
   plans: TrainingPlan[];
+  /** User-added exercise master entries (defaults are not stored). */
+  exercises: ExerciseMaster[];
 }
 
 export type CollectionName = keyof AppData;
@@ -12,6 +14,7 @@ export type CollectionName = keyof AppData;
 export const EMPTY_DATA: AppData = {
   workouts: [],
   plans: [],
+  exercises: [],
 };
 
 /** Minimal async key-value store (localStorage on web, AsyncStorage on mobile). */
@@ -99,21 +102,23 @@ export function reconcile<T>(
 type DocsByKey = Record<string, string>;
 type Snapshot = Record<CollectionName, DocsByKey>;
 
-const COLLECTIONS: CollectionName[] = ['workouts', 'plans'];
+const COLLECTIONS: CollectionName[] = ['workouts', 'plans', 'exercises'];
 
 const keyOf: { [C in CollectionName]: (item: AppData[C][number]) => string } = {
   workouts: (w) => w.id,
   plans: (p) => p.id,
+  exercises: (e) => e.id,
 };
 
 // Newest first, deterministic across devices.
 const sorters = {
   workouts: (a: Workout, b: Workout) => b.createdAt.localeCompare(a.createdAt),
   plans: (a: TrainingPlan, b: TrainingPlan) => b.createdAt.localeCompare(a.createdAt),
+  exercises: (a: ExerciseMaster, b: ExerciseMaster) => a.id.localeCompare(b.id),
 };
 
 function emptySnapshot(): Snapshot {
-  return { workouts: {}, plans: {} };
+  return { workouts: {}, plans: {}, exercises: {} };
 }
 
 /** A collection as a uniform array of [key, doc] pairs. */
@@ -177,6 +182,7 @@ export class SyncEngine {
     return {
       workouts: pick<Workout>('workouts'),
       plans: pick<TrainingPlan>('plans'),
+      exercises: pick<ExerciseMaster>('exercises'),
     };
   }
 
