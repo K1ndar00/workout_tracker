@@ -1,4 +1,4 @@
-export type AppView = 'workouts' | 'plans' | 'nutrition' | 'progress';
+export type AppView = 'workouts' | 'plans' | 'progress';
 
 export interface WorkoutSet {
   id: string;
@@ -48,34 +48,4 @@ export interface TrainingPlan {
   days: PlanDay[];
   isActive: boolean;
   createdAt: string;
-}
-
-// Nutrition
-export interface FoodItem {
-  id: string;
-  name: string;
-  amount: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
-
-export interface NutritionMeal {
-  id: string;
-  name: string;
-  foods: FoodItem[];
-}
-
-export interface DailyNutrition {
-  id: string;
-  date: string;
-  meals: NutritionMeal[];
-}
-
-export interface NutritionSettings {
-  targetCalories: number;
-  targetProtein: number;
-  targetCarbs: number;
-  targetFat: number;
 }

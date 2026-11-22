@@ -1,12 +1,9 @@
 import type { AppData, KeyValueStorage } from '@/shared/sync';
-import { DEFAULT_SETTINGS } from '@/shared/sync';
 
 // Keys used before accounts/sync existed.
 const LEGACY = {
   workouts: 'workout-tracker-v1',
   plans: 'workout-tracker-plans-v1',
-  nutrition: 'workout-tracker-nutrition-v1',
-  settings: 'workout-tracker-settings-v1',
 };
 const LEGACY_CLAIMED = 'workout-tracker-legacy-claimed';
 const DATA_KEY = /^wt:[^:]+:data$/;
@@ -26,10 +23,8 @@ function claimLegacyData(): string | null {
   const data: AppData = {
     workouts: readJson(LEGACY.workouts, []),
     plans: readJson(LEGACY.plans, []),
-    nutrition: readJson(LEGACY.nutrition, []),
-    settings: { ...DEFAULT_SETTINGS, ...readJson(LEGACY.settings, {}) },
   };
-  const empty = !data.workouts.length && !data.plans.length && !data.nutrition.length;
+  const empty = !data.workouts.length && !data.plans.length;
   if (empty) return null;
   localStorage.setItem(LEGACY_CLAIMED, '1');
   return JSON.stringify(data);

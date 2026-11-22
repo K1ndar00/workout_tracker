@@ -1,28 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { DailyNutrition, NutritionSettings, TrainingPlan, Workout } from './types';
+import type { TrainingPlan, Workout } from './types';
 
 /** Everything the app stores. Both the web and mobile clients keep exactly this shape. */
 export interface AppData {
   workouts: Workout[];
   plans: TrainingPlan[];
-  nutrition: DailyNutrition[];
-  settings: NutritionSettings;
 }
 
 export type CollectionName = keyof AppData;
 
-export const DEFAULT_SETTINGS: NutritionSettings = {
-  targetCalories: 2000,
-  targetProtein: 150,
-  targetCarbs: 250,
-  targetFat: 65,
-};
-
 export const EMPTY_DATA: AppData = {
   workouts: [],
   plans: [],
-  nutrition: [],
-  settings: DEFAULT_SETTINGS,
 };
 
 /** Minimal async key-value store (localStorage on web, AsyncStorage on mobile). */
@@ -110,30 +99,25 @@ export function reconcile<T>(
 type DocsByKey = Record<string, string>;
 type Snapshot = Record<CollectionName, DocsByKey>;
 
-const COLLECTIONS: CollectionName[] = ['workouts', 'plans', 'nutrition', 'settings'];
+const COLLECTIONS: CollectionName[] = ['workouts', 'plans'];
 
-const SETTINGS_KEY = 'settings';
-
-const keyOf: { [C in 'workouts' | 'plans' | 'nutrition']: (item: AppData[C][number]) => string } = {
+const keyOf: { [C in CollectionName]: (item: AppData[C][number]) => string } = {
   workouts: (w) => w.id,
   plans: (p) => p.id,
-  nutrition: (n) => n.date,
 };
 
 // Newest first, deterministic across devices.
 const sorters = {
   workouts: (a: Workout, b: Workout) => b.createdAt.localeCompare(a.createdAt),
   plans: (a: TrainingPlan, b: TrainingPlan) => b.createdAt.localeCompare(a.createdAt),
-  nutrition: (a: DailyNutrition, b: DailyNutrition) => b.date.localeCompare(a.date),
 };
 
 function emptySnapshot(): Snapshot {
-  return { workouts: {}, plans: {}, nutrition: {}, settings: {} };
+  return { workouts: {}, plans: {} };
 }
 
-/** Lists (not settings) as a uniform array of [key, doc] pairs. */
+/** A collection as a uniform array of [key, doc] pairs. */
 function entries(data: AppData, c: CollectionName): [string, unknown][] {
-  if (c === 'settings') return [[SETTINGS_KEY, data.settings]];
   const list = data[c] as unknown[];
   return list.map((item) => [keyOf[c](item as never), item]);
 }
@@ -182,7 +166,7 @@ export class SyncEngine {
     return next;
   }
 
-  private async fetchRemote(): Promise<AppData & { hasSettings: boolean }> {
+  private async fetchRemote(): Promise<AppData> {
     const { data, error } = await this.client
       .from('documents')
       .select('collection, key, data')
@@ -190,13 +174,9 @@ export class SyncEngine {
     if (error) throw error;
     const rows = (data ?? []) as Row[];
     const pick = <T,>(c: CollectionName) => rows.filter((r) => r.collection === c).map((r) => r.data as T);
-    const settingsRows = pick<NutritionSettings>('settings');
     return {
       workouts: pick<Workout>('workouts'),
       plans: pick<TrainingPlan>('plans'),
-      nutrition: pick<DailyNutrition>('nutrition'),
-      settings: settingsRows[0] ?? DEFAULT_SETTINGS,
-      hasSettings: settingsRows.length > 0,
     };
   }
 
@@ -233,22 +213,12 @@ export class SyncEngine {
       const upserts: Row[] = [];
       const deletes: { collection: CollectionName; key: string }[] = [];
 
-      for (const c of ['workouts', 'plans', 'nutrition'] as const) {
+      for (const c of COLLECTIONS) {
         const res = reconcile<never>(local[c] as never[], remote[c] as never[], this.snapshot[c], keyOf[c] as never);
         (out[c] as unknown[]) = (res.items as unknown[]).slice().sort(sorters[c] as never);
         res.upserts.forEach((item) => upserts.push({ collection: c, key: keyOf[c](item as never), data: item }));
         res.deletes.forEach((key) => deletes.push({ collection: c, key }));
       }
-
-      const sRes = reconcile<NutritionSettings>(
-        [local.settings],
-        remote.hasSettings ? [remote.settings] : [],
-        this.snapshot.settings,
-        () => SETTINGS_KEY
-      );
-      // Settings has no delete UI: if reconcile dropped it, keep the defaults rather than nothing.
-      out.settings = sRes.items[0] ?? DEFAULT_SETTINGS;
-      sRes.upserts.forEach((item) => upserts.push({ collection: 'settings', key: SETTINGS_KEY, data: item }));
 
       apply(out);
       await this.writeOps({ upserts, deletes });
@@ -279,7 +249,7 @@ export class SyncEngine {
           if (this.snapshot[c][key] !== json) upserts.push({ collection: c, key, data: doc });
         }
         for (const key of Object.keys(this.snapshot[c])) {
-          if (!seen.has(key) && c !== 'settings') deletes.push({ collection: c, key });
+          if (!seen.has(key)) deletes.push({ collection: c, key });
         }
       }
 
