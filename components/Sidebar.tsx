@@ -3,12 +3,13 @@
 import { useMemo, useState } from 'react';
 import { AppView, TrainingPlan, Workout } from '@/shared/types';
 import { formatDate, formatMonthKey } from '@/shared/utils';
-import { BarChart2, ClipboardList, Dumbbell, LogOut, Plus, Trash2, TrendingUp, X } from 'lucide-react';
+import { BarChart2, ClipboardList, Dumbbell, ListChecks, LogOut, Plus, Trash2, TrendingUp, X } from 'lucide-react';
 import type { SyncStatus } from '@/shared/useAppData';
 
 const NAV: { id: AppView; label: string; Icon: React.ElementType }[] = [
   { id: 'workouts', label: '記録', Icon: Dumbbell },
   { id: 'plans', label: '計画', Icon: ClipboardList },
+  { id: 'exercises', label: '種目', Icon: ListChecks },
   { id: 'progress', label: '進捗', Icon: TrendingUp },
 ];
 
@@ -175,6 +176,14 @@ export default function Sidebar(props: SidebarProps) {
               </div>
             ))}
           </>
+        )}
+
+        {/* Exercise master: managed in the main pane */}
+        {view === 'exercises' && (
+          <div className="px-3 py-6 text-xs text-gray-400 text-center">
+            <ListChecks className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+            記録・計画で選べる種目
+          </div>
         )}
 
         {/* Progress: no list needed */}
