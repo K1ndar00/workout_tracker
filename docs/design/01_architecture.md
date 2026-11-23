@@ -24,17 +24,17 @@ Supabase
 
 ## 2. コンポーネントの役割
 
-| 場所 | 役割 |
-| --- | --- |
-| `app/page.tsx` | メイン画面。4 つのビュー(記録 / 計画 / 種目 / 進捗)を切り替える |
-| `components/` | UI 部品。`AuthGate`(ログイン)、`Sidebar`、`WorkoutDetail`、`ExerciseBlock`、`PlansView`、`ExercisesView`、`ExercisePicker`、`ProgressView` |
-| `lib/supabase.ts` | Supabase クライアントの生成 |
-| `lib/db.ts` | **データベースへのアクセスをここに集約**(取得・保存・削除)。画面は Supabase を直接呼ばない |
-| `lib/useData.ts` | 画面用のデータ管理フック。読み込み、編集の即時反映、自動保存、エラー表示 |
-| `lib/types.ts` | 画面で使う型 |
-| `lib/exercises.ts` | 部位の定義、使用中の種目の判定など |
-| `lib/utils.ts` | ID・日付(ローカル日付)のユーティリティ |
-| `supabase/migrations/` | DB 定義(`0002` 新スキーマ、`0003` 旧データの移行、`0004` 進捗用ビュー) |
+| 場所                     | 役割                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `app/page.tsx`         | メイン画面。4 つのビュー(記録 / 計画 / 種目 / 進捗)を切り替える                                                                                       |
+| `components/`          | UI 部品。`AuthGate`(ログイン)、`Sidebar`、`WorkoutDetail`、`ExerciseBlock`、`PlansView`、`ExercisesView`、`ExercisePicker`、`ProgressView` |
+| `lib/supabase.ts`      | Supabase クライアントの生成                                                                                                           |
+| `lib/db.ts`            | **データベースへのアクセスをここに集約**(取得・保存・削除)。画面は Supabase を直接呼ばない                                                                        |
+| `lib/useData.ts`       | 画面用のデータ管理フック。読み込み、編集の即時反映、自動保存、エラー表示                                                                                         |
+| `lib/types.ts`         | 画面で使う型                                                                                                                       |
+| `lib/exercises.ts`     | 部位の定義、使用中の種目の判定など                                                                                                            |
+| `lib/utils.ts`         | ID・日付(ローカル日付)のユーティリティ                                                                                                        |
+| `supabase/migrations/` | DB 定義(`0002` 新スキーマ、`0003` 旧データの移行、`0004` 進捗用ビュー)                                                                             |
 
 ## 3. データの流れ
 
