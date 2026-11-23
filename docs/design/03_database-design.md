@@ -4,32 +4,186 @@
 
 ## 1. ER 図
 
+開発者が `supabase/migrations/0002_normalized_schema.sql` を読みながら作成(Mermaid 記法)。
+
+```mermaid
+erDiagram
+    exercises {
+        id id PK
+        id user_id FK
+        text name
+        text part
+        date created_at
+    }
+
+    workouts {
+        id id PK
+        id user_id FK
+        text title
+        date date
+        emoji emoji
+        text notes
+        date created_at
+    }
+
+    workout_exercises {
+        id id PK
+        id user_id FK
+        id workout_id FK
+        id exercise_id FK
+        number position
+    }
+
+    workout_sets {
+        id id PK
+        id user_id FK
+        id workout_exercise_id FK
+        number position
+        number weight
+        number reps
+        text unit
+        boolean completed
+    }
+
+    plans {
+        id id PK
+        id user_id FK
+        text name
+        emoji emoji
+        text description
+        number frequency
+        boolean is_active
+        date created_at
+    }
+
+    plan_days {
+        id id PK
+        id user_id FK
+        id plan_id FK
+        text label
+        number position
+    }
+
+    plan_exercises {
+        id id PK
+        id user_id FK
+        id plan_day_id FK
+        id exercise_id FK
+        number position
+        number sets
+        text reps
+        number weight
+    }
+
+    workouts ||--o{ workout_exercises : has
+    exercises ||--o{ workout_exercises : has_on_delete_restrict
+    workout_exercises ||--o{ workout_sets : has
+
+    plans ||--o{ plan_days : has
+    plan_days ||--o{ plan_exercises : equal
+    exercises ||--o{ plan_exercises : equal_on_delete_restrict
 ```
-auth.users
-  ├─ exercises (user_id が NULL = 初期種目)
-  ├─ workouts ─ workout_exercises ─ workout_sets
-  │                  └──(exercise_id)──► exercises   ※削除制限あり
-  └─ plans ─ plan_days ─ plan_exercises
-                           └──(exercise_id)──► exercises   ※削除制限あり
-```
+
+- `auth.users` は省略(全テーブル共通で、`user_id` が `auth.users.id` を指す外部キー)。
+- `exercises.user_id` が `NULL` の行は、初期種目(全ユーザー共通で読み取れる)。
+- ラベルに `_on_delete_restrict` が付いた関係は、参照先の種目が使われていると削除できない(エラーコード 23503)。他は `on delete cascade`(親を消すと子も消える)。
 
 ## 2. テーブル
 
-| テーブル | 主なカラム | 備考 |
-| --- | --- | --- |
-| `exercises` | `id`, `user_id`, `name`, `part`, `created_at` | `part` は `shoulder/chest/arm/abs/back/leg/unclassified`。同じ名前(大文字小文字・前後の空白を無視)は 1 ユーザーにつき 1 つ |
-| `workouts` | `id`, `user_id`, `title`, `date`(date 型), `emoji`, `notes`, `created_at` | 一覧用に `(user_id, date desc)` のインデックス |
-| `workout_exercises` | `id`, `user_id`, `workout_id`, `exercise_id`, `position` | ワークアウト内の種目と並び順 |
-| `workout_sets` | `id`, `user_id`, `workout_exercise_id`, `position`, `weight`, `reps`, `unit`, `completed` | `unit` は `kg/lbs`。`weight`・`reps` は 0 以上 |
-| `plans` | `id`, `user_id`, `name`, `emoji`, `description`, `frequency`(1〜7), `is_active`, `created_at` | |
-| `plan_days` | `id`, `user_id`, `plan_id`, `label`, `position` | |
-| `plan_exercises` | `id`, `user_id`, `plan_day_id`, `exercise_id`, `position`, `sets`, `reps`(text), `weight` | |
+| テーブル                | 主なカラム                                                                                        | 備考                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `exercises`         | `id`, `user_id`, `name`, `part`, `created_at`                                                | `part` は `shoulder/chest/arm/abs/back/leg/unclassified`。同じ名前(大文字小文字・前後の空白を無視)は 1 ユーザーにつき 1 つ |
+| `workouts`          | `id`, `user_id`, `title`, `date`(date 型), `emoji`, `notes`, `created_at`                     | 一覧用に `(user_id, date desc)` のインデックス                                                          |
+| `workout_exercises` | `id`, `user_id`, `workout_id`, `exercise_id`, `position`                                     | ワークアウト内の種目と並び順                                                                               |
+| `workout_sets`      | `id`, `user_id`, `workout_exercise_id`, `position`, `weight`, `reps`, `unit`, `completed`    | `unit` は `kg/lbs`。`weight`・`reps` は 0 以上                                                     |
+| `plans`             | `id`, `user_id`, `name`, `emoji`, `description`, `frequency`(1〜7), `is_active`, `created_at` |                                                                                              |
+| `plan_days`         | `id`, `user_id`, `plan_id`, `label`, `position`                                              |                                                                                              |
+| `plan_exercises`    | `id`, `user_id`, `plan_day_id`, `exercise_id`, `position`, `sets`, `reps`(text), `weight`    |                                                                                              |
+|                     |                                                                                              |                                                                                              |
 
 - 主キーは `uuid`。外部キーにはインデックスを付けている。
 - 子 → 親は `on delete cascade`(ワークアウトを消せば、種目・セットも消える)。
 - **種目への参照だけ `on delete restrict`**: 記録・計画で使われている種目は、DB が削除を拒否する(エラーコード 23503)。
 - 初期種目(30 件)は `user_id` が NULL の行として登録済み。ID は名前から決まる固定値。
 
+```mermaid
+erDiagram
+    exercises {
+        id id PK
+        id user_id FK
+        text name
+        text part
+        date created_at
+    }
+    
+    workouts{
+	    id id PK
+	    id user_id FK
+	    text title
+	    date date
+	    emoji emoji
+	    text notes
+	    date created_at
+    }
+    
+    workout_exercises{
+	    id id PK
+	    id user_id FK
+	    id workout_id FK
+	    id exercise_id FK
+	    number position
+    }
+    
+    workout_sets{
+	    id id PK
+	    id user_id FK
+	    id workout_exercise_id FK
+	    number position
+	    number weight
+	    number reps
+	    text unit
+	    boolean completed
+    }
+    
+    plans{
+	    id id PK
+	    id user_id FK
+	    text name
+	    emoji emoji
+	    text description
+	    number frequency
+	    boolean is_active
+	    date created_at
+    }
+
+    plan_days{
+	    id id PK
+	    id user_id FK
+	    id plan_id FK
+	    text label
+	    number position
+    }
+    
+    plan_exercises{
+	    id id PK
+	    id user_id FK
+	    id plan_day_id FK
+	    id exercise_id FK
+	    number position
+	    number sets
+	    text reps
+	    number weight
+    }
+    
+    workouts ||--o{ workout_exercises: has
+    exercises ||--o{ workout_exercises: has_on_delete_restrict
+    workout_exercises ||--o{ workout_sets: has
+    
+    plans ||--o{ plan_days: has
+    plan_days ||--o{ plan_exercises: equal
+    exercises ||--o{ plan_exercises: equal_on_delete_restrict
+    
+```
 ## 3. セキュリティ(RLS)
 
 - 全テーブルで RLS を有効化。
