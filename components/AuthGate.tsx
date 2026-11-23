@@ -5,11 +5,11 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Dumbbell } from 'lucide-react';
 
-/** Shows the login form until a Supabase session exists, then renders children with the user id. */
+/** Shows the login form until a Supabase session exists, then renders children with the user id. Login is required. */
 export default function AuthGate({
   children,
 }: {
-  children: (userId: string | null, signOut: () => void) => React.ReactNode;
+  children: (userId: string, signOut: () => void) => React.ReactNode;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [checking, setChecking] = useState(!!supabase);
@@ -24,8 +24,7 @@ export default function AuthGate({
     return () => data.subscription.unsubscribe();
   }, []);
 
-  // Not configured -> local-only mode.
-  if (!supabase) return <>{children(null, () => {})}</>;
+  if (!supabase) return <NotConfigured />;
   if (checking) return null;
   if (!session) return <LoginForm />;
   return <>{children(session.user.id, () => void supabase!.auth.signOut())}</>;
@@ -65,7 +64,7 @@ function LoginForm() {
           <h1 className="text-lg font-bold text-gray-900">Workout Tracker</h1>
         </div>
         <p className="text-xs text-gray-500 mb-4">
-          アカウントでログインすると、Web とモバイルアプリで同じデータを操作できます。
+          ログインしてご利用ください。データはアカウントごとに保存されます。
         </p>
         <label className="block text-xs text-gray-500 mb-1">メールアドレス</label>
         <input
@@ -104,6 +103,20 @@ function LoginForm() {
           {mode === 'signin' ? 'アカウントを作成する' : 'ログインに戻る'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function NotConfigured() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 text-center">
+      <div className="max-w-sm text-sm text-gray-600">
+        <p className="font-semibold text-gray-800 mb-2">Supabase が設定されていません</p>
+        <p>
+          <code>.env.local</code> に <code>NEXT_PUBLIC_SUPABASE_URL</code> と{' '}
+          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> を設定してください(README を参照)。
+        </p>
+      </div>
     </div>
   );
 }

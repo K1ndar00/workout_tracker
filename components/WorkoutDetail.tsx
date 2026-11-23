@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, Workout } from '@/shared/types';
-import { createExercise } from '@/shared/utils';
+import { Exercise, ExerciseMaster, PartId, Workout } from '@/lib/types';
+import { createExercise } from '@/lib/utils';
 import ExerciseBlock from './ExerciseBlock';
 import { Calendar, FileText, Plus } from 'lucide-react';
 
@@ -11,9 +11,11 @@ const EMOJIS = ['🏋️', '💪', '🤸', '🏃', '🚴', '🧘', '⚽', '🏊'
 interface WorkoutDetailProps {
   workout: Workout;
   onChange: (workout: Workout) => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
-export default function WorkoutDetail({ workout, onChange }: WorkoutDetailProps) {
+export default function WorkoutDetail({ workout, onChange, masters, onCreateMaster }: WorkoutDetailProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const [newExerciseId, setNewExerciseId] = useState<string | null>(null);
@@ -147,6 +149,8 @@ export default function WorkoutDetail({ workout, onChange }: WorkoutDetailProps)
                 onChange={updateExercise}
                 onDelete={() => deleteExercise(exercise.id)}
                 autoFocus={exercise.id === newExerciseId}
+                masters={masters}
+                onCreateMaster={onCreateMaster}
               />
             ))}
           </div>

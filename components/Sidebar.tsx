@@ -1,15 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
-import { formatDate, formatDayLabel, formatMonthKey, today } from '@/shared/utils';
-import { BarChart2, ClipboardList, Dumbbell, LogOut, Plus, Trash2, TrendingUp, UtensilsCrossed, X } from 'lucide-react';
-import type { SyncStatus } from '@/shared/useAppData';
+import { AppView, TrainingPlan, Workout } from '@/lib/types';
+import { formatDate, formatMonthKey } from '@/lib/utils';
+import { BarChart2, ClipboardList, Dumbbell, ListChecks, LogOut, Plus, Trash2, TrendingUp, X } from 'lucide-react';
+import type { SaveStatus } from '@/lib/useData';
 
 const NAV: { id: AppView; label: string; Icon: React.ElementType }[] = [
   { id: 'workouts', label: '記録', Icon: Dumbbell },
   { id: 'plans', label: '計画', Icon: ClipboardList },
-  { id: 'nutrition', label: '栄養', Icon: UtensilsCrossed },
+  { id: 'exercises', label: '種目', Icon: ListChecks },
   { id: 'progress', label: '進捗', Icon: TrendingUp },
 ];
 
@@ -30,22 +30,16 @@ interface SidebarProps {
   onSelectPlan: (id: string) => void;
   onNewPlan: () => void;
   onDeletePlan: (id: string) => void;
-  // nutrition
-  nutritionLogs: DailyNutrition[];
-  selectedDate: string;
-  onSelectDate: (date: string) => void;
   // account / sync
-  syncStatus: SyncStatus;
-  syncError: string | null;
-  signedIn: boolean;
+  saveStatus: SaveStatus;
+  onRetrySave: () => void;
   onSignOut: () => void;
 }
 
-const SYNC_LABEL: Record<SyncStatus, { text: string; dot: string }> = {
-  local: { text: 'この端末のみに保存', dot: 'bg-gray-300' },
-  syncing: { text: '同期中…', dot: 'bg-amber-400' },
-  synced: { text: '同期済み', dot: 'bg-emerald-500' },
-  error: { text: '同期エラー(自動で再試行)', dot: 'bg-red-500' },
+const SAVE_LABEL: Record<SaveStatus, { text: string; dot: string }> = {
+  saved: { text: '保存済み', dot: 'bg-emerald-500' },
+  saving: { text: '保存中…', dot: 'bg-amber-400' },
+  error: { text: '保存できていません', dot: 'bg-red-500' },
 };
 
 function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
@@ -58,19 +52,10 @@ function groupByMonth(workouts: Workout[]): [string, Workout[]][] {
   return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
 }
 
-function last14Days(): string[] {
-  return Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toISOString().slice(0, 10);
-  });
-}
-
 export default function Sidebar(props: SidebarProps) {
   const { view, onViewChange, isOpen, onClose } = props;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const grouped = useMemo(() => groupByMonth(props.workouts), [props.workouts]);
-  const dates = useMemo(() => last14Days(), []);
 
   return (
     <aside
@@ -191,30 +176,12 @@ export default function Sidebar(props: SidebarProps) {
           </>
         )}
 
-        {/* Nutrition date list */}
-        {view === 'nutrition' && (
-          <>
-            {dates.map((date) => {
-              const log = props.nutritionLogs.find((n) => n.date === date);
-              const kcal = log?.meals.flatMap((m) => m.foods).reduce((a, f) => a + f.calories, 0) ?? 0;
-              return (
-                <div
-                  key={date}
-                  onClick={() => { props.onSelectDate(date); onClose(); }}
-                  className={`flex items-center justify-between px-2 py-2 rounded-md cursor-pointer mb-0.5 ${
-                    props.selectedDate === date
-                      ? 'bg-gray-200/80 text-gray-900'
-                      : 'text-gray-700 hover:bg-gray-200/50 active:bg-gray-200'
-                  }`}
-                >
-                  <span className="text-[13px] font-medium">{formatDayLabel(date)}</span>
-                  {kcal > 0 && (
-                    <span className="text-[11px] text-gray-400">{kcal.toLocaleString()}kcal</span>
-                  )}
-                </div>
-              );
-            })}
-          </>
+        {/* Exercise master: managed in the main pane */}
+        {view === 'exercises' && (
+          <div className="px-3 py-6 text-xs text-gray-400 text-center">
+            <ListChecks className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+            記録・計画で選べる種目
+          </div>
         )}
 
         {/* Progress: no list needed */}
@@ -241,15 +208,16 @@ export default function Sidebar(props: SidebarProps) {
 
       {/* Sync status / account */}
       <div className="px-3 py-2.5 border-t border-gray-200 shrink-0 flex items-center gap-2 text-[11px] text-gray-500">
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SYNC_LABEL[props.syncStatus].dot}`} />
-        <span className="flex-1 truncate" title={props.syncError ?? undefined}>
-          {SYNC_LABEL[props.syncStatus].text}
-        </span>
-        {props.signedIn && (
-          <button onClick={props.onSignOut} title="ログアウト" className="p-1 rounded hover:bg-gray-200 text-gray-500">
-            <LogOut className="w-3.5 h-3.5" />
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SAVE_LABEL[props.saveStatus].dot}`} />
+        <span className="flex-1 truncate">{SAVE_LABEL[props.saveStatus].text}</span>
+        {props.saveStatus === 'error' && (
+          <button onClick={props.onRetrySave} className="px-1.5 py-0.5 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">
+            再試行
           </button>
         )}
+        <button onClick={props.onSignOut} title="ログアウト" className="p-1 rounded hover:bg-gray-200 text-gray-500">
+          <LogOut className="w-3.5 h-3.5" />
+        </button>
       </div>
     </aside>
   );

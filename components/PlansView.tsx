@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { PlanDay, PlanExercise, TrainingPlan } from '@/shared/types';
-import { createPlanDay, createPlanExercise } from '@/shared/utils';
+import { ExerciseMaster, PartId, PlanDay, PlanExercise, TrainingPlan } from '@/lib/types';
+import ExercisePicker from './ExercisePicker';
+import { createPlanDay, createPlanExercise } from '@/lib/utils';
 import { ChevronDown, ChevronRight, Dumbbell, Plus, Trash2 } from 'lucide-react';
 
 const EMOJIS = ['🗓️', '💪', '🏋️', '🤸', '🏃', '🚴', '🔥', '⚡', '🦵', '🦾', '🏆', '🎯'];
@@ -11,9 +12,11 @@ interface Props {
   plan: TrainingPlan;
   onChange: (plan: TrainingPlan) => void;
   onNew: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
-export default function PlansView({ plan, onChange, onNew }: Props) {
+export default function PlansView({ plan, onChange, onNew, masters, onCreateMaster }: Props) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [openDays, setOpenDays] = useState<Set<string>>(() => new Set(plan.days.map((d) => d.id)));
 
@@ -125,6 +128,8 @@ export default function PlansView({ plan, onChange, onNew }: Props) {
             onChange={updateDay}
             onDelete={() => deleteDay(day.id)}
             canDelete={plan.days.length > 1}
+            masters={masters}
+            onCreateMaster={onCreateMaster}
           />
         ))}
       </div>
@@ -141,7 +146,7 @@ export default function PlansView({ plan, onChange, onNew }: Props) {
 }
 
 function DaySection({
-  day, isOpen, onToggle, onChange, onDelete, canDelete,
+  day, isOpen, onToggle, onChange, onDelete, canDelete, masters, onCreateMaster,
 }: {
   day: PlanDay;
   isOpen: boolean;
@@ -149,6 +154,8 @@ function DaySection({
   onChange: (d: PlanDay) => void;
   onDelete: () => void;
   canDelete: boolean;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }) {
   function updateExercise(ex: PlanExercise) {
     onChange({ ...day, exercises: day.exercises.map((e) => (e.id === ex.id ? ex : e)) });
@@ -195,6 +202,8 @@ function DaySection({
               ex={ex}
               onChange={updateExercise}
               onDelete={() => deleteExercise(ex.id)}
+              masters={masters}
+              onCreateMaster={onCreateMaster}
             />
           ))}
           <button
@@ -210,7 +219,15 @@ function DaySection({
   );
 }
 
-function ExerciseRow({ ex, onChange, onDelete }: { ex: PlanExercise; onChange: (e: PlanExercise) => void; onDelete: () => void }) {
+function ExerciseRow({
+  ex, onChange, onDelete, masters, onCreateMaster,
+}: {
+  ex: PlanExercise;
+  onChange: (e: PlanExercise) => void;
+  onDelete: () => void;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -219,11 +236,12 @@ function ExerciseRow({ ex, onChange, onDelete }: { ex: PlanExercise; onChange: (
       onMouseLeave={() => setHovered(false)}
     >
       <Dumbbell className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-      <input
-        value={ex.name}
-        onChange={(e) => onChange({ ...ex, name: e.target.value })}
-        placeholder="種目名"
-        className="flex-1 text-sm text-gray-700 placeholder-gray-300 bg-transparent border-none outline-none"
+      <ExercisePicker
+        exerciseId={ex.exerciseId}
+        masters={masters}
+        onSelect={(m) => onChange({ ...ex, exerciseId: m.id })}
+        onCreate={onCreateMaster}
+        selectClassName="w-full text-sm text-gray-700 bg-transparent border-none outline-none cursor-pointer"
       />
       <div className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
         <input
