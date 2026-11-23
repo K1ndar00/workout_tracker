@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Exercise, WorkoutSet } from '@/shared/types';
-import { createSet } from '@/shared/utils';
+import { Exercise, ExerciseMaster, PartId, WorkoutSet } from '@/lib/types';
+import ExercisePicker from './ExercisePicker';
+import { createSet } from '@/lib/utils';
 import { Check, GripVertical, Plus, Trash2 } from 'lucide-react';
 
 interface ExerciseBlockProps {
@@ -10,11 +11,13 @@ interface ExerciseBlockProps {
   onChange: (exercise: Exercise) => void;
   onDelete: () => void;
   autoFocus?: boolean;
+  masters: ExerciseMaster[];
+  onCreateMaster: (name: string, part: PartId) => Promise<ExerciseMaster>;
 }
 
-export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus }: ExerciseBlockProps) {
+export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus, masters, onCreateMaster }: ExerciseBlockProps) {
   const [hovered, setHovered] = useState(false);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (autoFocus && nameRef.current) {
@@ -62,12 +65,12 @@ export default function ExerciseBlock({ exercise, onChange, onDelete, autoFocus 
         >
           <GripVertical className="w-4 h-4" />
         </span>
-        <input
+        <ExercisePicker
           ref={nameRef}
-          value={exercise.name}
-          onChange={(e) => onChange({ ...exercise, name: e.target.value })}
-          placeholder="エクササイズ名を入力..."
-          className="flex-1 text-base font-semibold text-gray-800 placeholder-gray-300 bg-transparent border-none outline-none"
+          exerciseId={exercise.exerciseId}
+          masters={masters}
+          onSelect={(m) => onChange({ ...exercise, exerciseId: m.id })}
+          onCreate={onCreateMaster}
         />
         <div className="flex items-center gap-2">
           {completedCount > 0 && (

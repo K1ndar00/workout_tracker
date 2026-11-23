@@ -1,148 +1,95 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { AppView, DailyNutrition, TrainingPlan, Workout } from '@/shared/types';
-import { useAppData } from '@/shared/useAppData';
-import { createNutritionDay, createPlan, createWorkout, today } from '@/shared/utils';
-import { supabase } from '@/lib/supabase';
-import { webStorage } from '@/lib/storage';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppView } from '@/lib/types';
+import { usedExerciseIds } from '@/lib/exercises';
+import { useData } from '@/lib/useData';
+import { createPlan, createWorkout } from '@/lib/utils';
 import AuthGate from '@/components/AuthGate';
 import Sidebar from '@/components/Sidebar';
 import WorkoutDetail from '@/components/WorkoutDetail';
 import EmptyState from '@/components/EmptyState';
 import PlansView from '@/components/PlansView';
-import NutritionView from '@/components/NutritionView';
 import ProgressView from '@/components/ProgressView';
-import { Menu, Plus } from 'lucide-react';
+import ExercisesView from '@/components/ExercisesView';
+import { Menu, Plus, X } from 'lucide-react';
 
 export default function Home() {
   return (
     <AuthGate>
-      {(userId, signOut) => <WorkoutApp key={userId ?? 'local'} userId={userId} onSignOut={signOut} />}
+      {(userId, signOut) => <WorkoutApp key={userId} onSignOut={signOut} />}
     </AuthGate>
   );
 }
 
-function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: () => void }) {
-  const {
-    ready: isLoaded,
-    status: syncStatus,
-    lastError: syncError,
-    sync,
-    workouts,
-    setWorkouts,
-    plans,
-    setPlans,
-    nutrition: nutritionLogs,
-    setNutrition: setNutritionLogs,
-    settings: nutritionSettings,
-    setSettings: setNutritionSettings,
-  } = useAppData({ client: supabase, userId, storage: webStorage });
+function WorkoutApp({ onSignOut }: { onSignOut: () => void }) {
+  const data = useData();
+  const { workouts, plans, exercises } = data;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<AppView>('workouts');
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(today());
 
-  // Pick the first item once the data has loaded, and again if the selection disappears
-  // (e.g. it was deleted on another device).
+  // Pick the first item once the data has loaded, and again if the selection disappears.
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!data.ready) return;
     if (!workouts.some((w) => w.id === selectedWorkoutId)) setSelectedWorkoutId(workouts[0]?.id ?? null);
     if (!plans.some((p) => p.id === selectedPlanId)) setSelectedPlanId(plans[0]?.id ?? null);
-  }, [isLoaded, workouts, plans, selectedWorkoutId, selectedPlanId]);
+  }, [data.ready, workouts, plans, selectedWorkoutId, selectedPlanId]);
 
-  // Refresh when the tab becomes visible again.
-  useEffect(() => {
-    if (!supabase) return;
-    const onVisible = () => { if (document.visibilityState === 'visible') void sync(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [sync]);
+  const usedIds = useMemo(() => usedExerciseIds(workouts, plans), [workouts, plans]);
 
-  // Workout handlers
   const handleNewWorkout = useCallback(() => {
     const w = createWorkout();
-    setWorkouts((prev) => [w, ...prev]);
+    data.addWorkout(w);
     setSelectedWorkoutId(w.id);
     setView('workouts');
     setSidebarOpen(false);
-  }, []);
+  }, [data.addWorkout]);
 
-  const handleUpdateWorkout = useCallback((updated: Workout) => {
-    setWorkouts((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
-  }, []);
-
-  const handleDeleteWorkout = useCallback((id: string) => {
-    setWorkouts((prev) => {
-      const remaining = prev.filter((w) => w.id !== id);
-      setSelectedWorkoutId(remaining[0]?.id ?? null);
-      return remaining;
-    });
-  }, []);
-
-  // Plan handlers
   const handleNewPlan = useCallback(() => {
     const p = createPlan();
-    setPlans((prev) => [p, ...prev]);
+    data.addPlan(p);
     setSelectedPlanId(p.id);
     setView('plans');
     setSidebarOpen(false);
-  }, []);
+  }, [data.addPlan]);
 
-  const handleUpdatePlan = useCallback((updated: TrainingPlan) => {
-    setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-  }, []);
-
-  const handleDeletePlan = useCallback((id: string) => {
-    setPlans((prev) => {
-      const remaining = prev.filter((p) => p.id !== id);
-      setSelectedPlanId(remaining[0]?.id ?? null);
-      return remaining;
-    });
-  }, []);
-
-  // Nutrition handlers
-  const getOrCreateLog = useCallback(
-    (date: string): DailyNutrition => {
-      const existing = nutritionLogs.find((n) => n.date === date);
-      if (existing) return existing;
-      const newLog = createNutritionDay(date);
-      setNutritionLogs((prev) => [newLog, ...prev]);
-      return newLog;
+  const handleDeleteMaster = useCallback(
+    (id: string) => {
+      if (usedIds.has(id)) return; // the database refuses too; this just avoids the round trip
+      void data.removeExercise(id);
     },
-    [nutritionLogs]
+    [usedIds, data.removeExercise]
   );
-
-  const handleNutritionChange = useCallback((log: DailyNutrition) => {
-    setNutritionLogs((prev) => {
-      // One log per date: that date is also the key it syncs under.
-      const exists = prev.some((n) => n.date === log.date);
-      return exists ? prev.map((n) => (n.date === log.date ? log : n)) : [log, ...prev];
-    });
-  }, []);
-
-  const handleDateChange = useCallback((date: string) => {
-    setSelectedDate(date);
-  }, []);
 
   const selectedWorkout = workouts.find((w) => w.id === selectedWorkoutId) ?? null;
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null;
-  const currentLog = nutritionLogs.find((n) => n.date === selectedDate) ?? createNutritionDay(selectedDate);
 
   const mobileTitle =
     view === 'workouts'
       ? selectedWorkout ? `${selectedWorkout.emoji} ${selectedWorkout.title}` : 'ワークアウト記録'
       : view === 'plans'
       ? selectedPlan ? `${selectedPlan.emoji} ${selectedPlan.name}` : 'トレーニング計画'
-      : view === 'nutrition'
-      ? '栄養管理'
+      : view === 'exercises'
+      ? '種目'
       : '進捗';
 
   const showMobileNew = view === 'workouts' || view === 'plans';
 
-  if (!isLoaded) return null;
+  if (data.loadFailed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm text-gray-700">データを読み込めませんでした。</p>
+        {data.notice && <p className="text-xs text-gray-400 break-all">{data.notice}</p>}
+        <button onClick={() => { data.clearNotice(); void data.reload(); }} className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm">
+          再読み込み
+        </button>
+      </div>
+    );
+  }
+  if (!data.ready) return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
@@ -159,18 +106,14 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
         selectedWorkoutId={selectedWorkoutId}
         onSelectWorkout={(id) => { setSelectedWorkoutId(id); setSidebarOpen(false); }}
         onNewWorkout={handleNewWorkout}
-        onDeleteWorkout={handleDeleteWorkout}
+        onDeleteWorkout={data.removeWorkout}
         plans={plans}
         selectedPlanId={selectedPlanId}
         onSelectPlan={(id) => { setSelectedPlanId(id); setSidebarOpen(false); }}
         onNewPlan={handleNewPlan}
-        onDeletePlan={handleDeletePlan}
-        nutritionLogs={nutritionLogs}
-        selectedDate={selectedDate}
-        onSelectDate={(date) => { setSelectedDate(date); setSidebarOpen(false); }}
-        syncStatus={syncStatus}
-        syncError={syncError}
-        signedIn={userId !== null}
+        onDeletePlan={data.removePlan}
+        saveStatus={data.saveStatus}
+        onRetrySave={() => void data.retrySave()}
         onSignOut={onSignOut}
       />
 
@@ -191,16 +134,25 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
           )}
         </div>
 
+        {data.notice && (
+          <div className="flex items-start gap-2 px-4 py-2 bg-red-50 text-red-600 text-xs shrink-0">
+            <span className="flex-1 break-all">{data.notice}</span>
+            <button onClick={data.clearNotice} aria-label="閉じる" className="p-0.5 hover:text-red-800">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Views */}
         <div className="flex-1">
           {view === 'workouts' && (
             selectedWorkout
-              ? <WorkoutDetail workout={selectedWorkout} onChange={handleUpdateWorkout} />
+              ? <WorkoutDetail workout={selectedWorkout} onChange={data.updateWorkout} masters={exercises} onCreateMaster={data.createExercise} />
               : <EmptyState onNew={handleNewWorkout} />
           )}
           {view === 'plans' && (
             selectedPlan
-              ? <PlansView plan={selectedPlan} onChange={handleUpdatePlan} onNew={handleNewPlan} />
+              ? <PlansView plan={selectedPlan} onChange={data.updatePlan} onNew={handleNewPlan} masters={exercises} onCreateMaster={data.createExercise} />
               : <div className="flex flex-col items-center justify-center h-full gap-4">
                   <p className="text-gray-400 text-sm">プランがありません</p>
                   <button onClick={handleNewPlan} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700">
@@ -208,22 +160,16 @@ function WorkoutApp({ userId, onSignOut }: { userId: string | null; onSignOut: (
                   </button>
                 </div>
           )}
-          {view === 'nutrition' && (
-            <NutritionView
-              log={currentLog}
-              settings={nutritionSettings}
-              onLogChange={handleNutritionChange}
-              onSettingsChange={setNutritionSettings}
-              onDateChange={handleDateChange}
+          {view === 'exercises' && (
+            <ExercisesView
+              masters={exercises}
+              usedIds={usedIds}
+              onCreate={data.createExercise}
+              onUpdate={(m) => void data.changeExercise(m)}
+              onDelete={handleDeleteMaster}
             />
           )}
-          {view === 'progress' && (
-            <ProgressView
-              workouts={workouts}
-              nutritionLogs={nutritionLogs}
-              settings={nutritionSettings}
-            />
-          )}
+          {view === 'progress' && <ProgressView workouts={workouts} saveStatus={data.saveStatus} />}
         </div>
       </main>
     </div>
