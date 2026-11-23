@@ -31,26 +31,20 @@ export default function AuthGate({
 }
 
 function LoginForm() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ kind: 'error'; text: string } | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!supabase) return;
     setBusy(true);
     setMessage(null);
-    const { data, error } =
-      mode === 'signin'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) {
       setMessage({ kind: 'error', text: error.message });
-    } else if (mode === 'signup' && !data.session) {
-      setMessage({ kind: 'info', text: '確認メールを送信しました。メール内のリンクを開いてからログインしてください。' });
     }
   }
 
@@ -80,7 +74,7 @@ function LoginForm() {
           type="password"
           required
           minLength={6}
-          autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full mb-4 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-gray-300"
@@ -93,14 +87,7 @@ function LoginForm() {
           disabled={busy}
           className="w-full bg-gray-900 text-white text-sm font-semibold py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40"
         >
-          {mode === 'signin' ? 'ログイン' : 'アカウント作成'}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(null); }}
-          className="w-full mt-3 text-xs text-gray-500 hover:text-gray-800"
-        >
-          {mode === 'signin' ? 'アカウントを作成する' : 'ログインに戻る'}
+          ログイン
         </button>
       </form>
     </div>
