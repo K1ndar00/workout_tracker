@@ -21,3 +21,6 @@ analysis/output/
 __pycache__/
 .pytest_cache/
 .venv/
+
+# Personal study notes (interview prep, code maps, session handoffs, etc.): not for a public repo
+docs/learning/
