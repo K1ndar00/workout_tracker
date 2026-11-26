@@ -31,7 +31,7 @@
    - **旧バージョン(`documents` テーブル)のデータがある場合のみ**、`0001_init.sql` を実行済みであることを確認し、続けて `0003_migrate_documents.sql` を実行して移行します。
    - 最後に `0004_progress_views.sql`(進捗画面用の集計ビュー)を実行します。新規の場合は `0002` → `0004` の順で、`0003` は不要です。
 3. Project Settings → API の **Project URL** と **anon public key** を控えます。
-4. (開発中に便利)Authentication → Providers → Email で「Confirm email」をオフにすると、確認メールなしで登録できます。
+4. アプリ画面に新規登録(サインアップ)は無いため、最初のユーザーは Authentication → Users → **Add user** から手動で作成します(メール確認不要で即ログインできます)。
 
 ### 2. 起動
 
